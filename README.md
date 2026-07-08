@@ -11,20 +11,20 @@ client connects to it by URL.
 ## Architecture
 
 <p align="center">
-  <img src="docs/architecture.png" alt="Deployment: MCP clients → mcp sidecar → Trilium, on the Docker network" width="520">
+  <img src="docs/architecture.png" alt="Deployment: MCP clients → trilium-mcp → Trilium, on the Docker network" width="520">
 </p>
 
-The sidecar talks to Trilium over the internal Docker network, so Trilium's ETAPI is
-never exposed publicly on its own. Clients reach the sidecar either through a TLS-terminating
-reverse proxy or directly over a trusted LAN — in both cases the ETAPI token they present is
-the only credential.
+**trilium-mcp** (this repo) runs as a container sidecar and talks to Trilium over the internal
+Docker network, so Trilium's ETAPI is never exposed publicly on its own. Clients reach trilium-mcp
+either through a TLS-terminating reverse proxy or directly over a trusted LAN — in both cases the
+ETAPI token they present is the only credential.
 
 ## How a request flows
 
-At a glance, the sidecar forwards the client's ETAPI token straight through to Trilium:
+At a glance, trilium-mcp forwards the client's ETAPI token straight through to Trilium:
 
 <p align="center">
-  <img src="docs/sequence-overview.png" alt="Client sends a tool call with an ETAPI token; the sidecar forwards it to Trilium and returns the result" width="560">
+  <img src="docs/sequence-overview.png" alt="Client sends a tool call with an ETAPI token; trilium-mcp forwards it to Trilium and returns the result" width="560">
 </p>
 
 In more detail — startup builds the tools from the OpenAPI spec, the middleware rejects any
