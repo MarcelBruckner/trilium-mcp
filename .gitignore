@@ -17,6 +17,7 @@ trilium-data/tmp/
 trilium-data/session_secret.txt
 trilium-data/*.db-shm
 trilium-data/*.db-wal
+trilium-data/backup/
 
 # Superpowers design docs (brainstorming specs / implementation plans) — local only
 docs/superpowers/
