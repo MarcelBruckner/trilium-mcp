@@ -7,10 +7,10 @@
 A standalone [MCP](https://modelcontextprotocol.io) server that exposes the
 [Trilium](https://triliumnotes.org) [ETAPI](https://github.com/TriliumNext/Trilium)
 (External API) as MCP tools. It runs as a **container sidecar** next to your Trilium
-instance: every documented ETAPI endpoint is turned into an MCP tool at startup via
-`FastMCP.from_openapi` (currently **40 tools** — `createNote`, `getNoteById`,
-`searchNotes`, `exportNoteSubtree`, …), served over streamable **HTTP** so any MCP
-client connects to it by URL.
+instance: nearly every documented ETAPI endpoint is turned into an MCP tool at startup
+via `FastMCP.from_openapi` (**38 tools** — `createNote`, `getNoteById`, `searchNotes`,
+`exportNoteSubtree`, …; the auth session endpoints `login`/`logout` are excluded),
+served over streamable **HTTP** so any MCP client connects to it by URL.
 
 ## Contents
 
