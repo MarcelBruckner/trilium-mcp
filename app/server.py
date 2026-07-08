@@ -1,6 +1,8 @@
+import io
 import os
 import sys
 import traceback
+import zipfile
 from contextvars import ContextVar
 from pathlib import Path
 
@@ -8,6 +10,7 @@ import httpx
 import uvicorn
 import yaml
 from fastmcp import FastMCP
+from fastmcp.server.providers.openapi import MCPType, RouteMap
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
@@ -29,6 +32,14 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8081
 DEFAULT_PATH = "/mcp"
 HEALTH_PATH = "/health"
+
+# exportNoteSubtree returns a binary ZIP, which FastMCP's OpenAPI machinery
+# tries to JSON-decode (crashing on the first non-UTF-8 byte). We exclude the
+# generated tool and register a replacement that unpacks the ZIP into text.
+EXPORT_FORMATS = ("markdown", "html")
+EXPORT_DEFAULT_FORMAT = "markdown"
+# Cap the returned text so a huge subtree can't blow up the client context.
+MAX_EXPORT_CHARS = 200_000
 
 # Per-request holder for the incoming client Authorization header. Populated by
 # TokenCaptureMiddleware and read by EtapiTokenAuth when calling Trilium.
@@ -127,6 +138,66 @@ def register_health(mcp: FastMCP) -> None:
         return PlainTextResponse("ok")
 
 
+def register_export_tool(mcp: FastMCP, client: httpx.AsyncClient) -> None:
+    """Register a working replacement for the generated exportNoteSubtree tool.
+
+    Trilium's `/notes/{noteId}/export` returns a binary ZIP archive. FastMCP's
+    OpenAPI-generated tool tries to `response.json()` every response and only
+    catches `json.JSONDecodeError`, so a ZIP body raises an uncaught
+    `UnicodeDecodeError` and the tool crashes. Here we fetch the ZIP ourselves,
+    unpack it, and return the notes as readable text so an LLM can answer
+    questions about the subtree. The `client` carries the same per-request ETAPI
+    auth as the generated tools (see EtapiTokenAuth).
+    """
+
+    @mcp.tool(name="exportNoteSubtree")
+    async def export_note_subtree(noteId: str, format: str = EXPORT_DEFAULT_FORMAT) -> str:
+        """Export a note and its entire subtree as readable text.
+
+        Fetches Trilium's ZIP export of the subtree rooted at `noteId` (use
+        "root" for the whole document), unpacks it, and returns each note's path
+        followed by its text content. `format` is "markdown" (default, most
+        readable) or "html". Binary files in the export (images, attachments)
+        are listed by name but not inlined.
+        """
+        fmt = format.lower()
+        if fmt not in EXPORT_FORMATS:
+            raise ValueError(
+                f"Unsupported format {format!r}; use one of {', '.join(EXPORT_FORMATS)}."
+            )
+        response = await client.get(f"/notes/{noteId}/export", params={"format": fmt})
+        response.raise_for_status()
+
+        try:
+            archive = zipfile.ZipFile(io.BytesIO(response.content))
+        except zipfile.BadZipFile as e:
+            raise ValueError(
+                f"Trilium did not return a valid ZIP export for note {noteId!r}: {e}"
+            ) from e
+
+        sections: list[str] = []
+        binaries: list[str] = []
+        for info in archive.infolist():
+            if info.is_dir():
+                continue
+            try:
+                text = archive.read(info).decode("utf-8")
+            except UnicodeDecodeError:
+                binaries.append(f"{info.filename} ({info.file_size} bytes)")
+                continue
+            sections.append(f"===== {info.filename} =====\n{text}")
+
+        out = (
+            f"Exported subtree of note {noteId!r} (format: {fmt}); "
+            f"{len(sections)} text file(s).\n\n" + "\n\n".join(sections)
+        )
+        if binaries:
+            out += "\n\n[binary files not shown: " + ", ".join(binaries) + "]"
+        if len(out) > MAX_EXPORT_CHARS:
+            out = out[:MAX_EXPORT_CHARS] + f"\n\n[truncated at {MAX_EXPORT_CHARS} characters]"
+        return out
+
+
 def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
     """Load the local OpenAPI spec and turn every documented ETAPI endpoint
     into a FastMCP tool. The ETAPI token is supplied per request by the client
@@ -155,7 +226,13 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
         # strings (e.g. branch.prefix), so response validation would reject
         # otherwise-successful calls. Return the real response instead.
         validate_output=False,
+        # Drop the generated exportNoteSubtree tool (binary ZIP response breaks
+        # FastMCP's JSON parsing); register_export_tool replaces it below.
+        route_maps=[
+            RouteMap(methods=["GET"], pattern=r"/export$", mcp_type=MCPType.EXCLUDE),
+        ],
     )
+    register_export_tool(mcp, client)
     register_health(mcp)
     return mcp
 
