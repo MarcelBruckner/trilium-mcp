@@ -2,7 +2,7 @@
   <img src="docs/trilium.svg" alt="Trilium logo" width="96">
 </p>
 
-<h1 align="center">Trilium ETAPI MCP server</h1>
+<h1 align="center"><a href="https://github.com/MarcelBruckner/trilium-mcp">Trilium ETAPI MCP server</a></h1>
 
 A standalone [MCP](https://modelcontextprotocol.io) server that exposes the
 [Trilium](https://triliumnotes.org) [ETAPI](https://github.com/TriliumNext/Trilium)
@@ -14,6 +14,7 @@ client connects to it by URL.
 
 ## Contents
 
+- [Contents](#contents)
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
 - [Connecting a client](#connecting-a-client)
@@ -223,12 +224,12 @@ config file. trilium-mcp is instead **HTTP-native** and forwards each client's t
 **per request**, so one deployment serves many clients and Trilium instances, and its tools are
 **generated from the ETAPI OpenAPI spec** (full endpoint coverage) rather than hand-written.
 
-| Project | Language | Transport | Token handling | Tools | Docker image | Latest activity |
-| --- | --- | --- | --- | --- | --- | --- |
-| **trilium-mcp** (this) | Python | Streamable **HTTP** | Per-request `Authorization` pass-through (multi-tenant) | **~40**, generated from OpenAPI | Yes (sidecar + GHCR) | active |
-| [tan-yong-sheng/triliumnext-mcp](https://github.com/tan-yong-sheng/triliumnext-mcp) | TypeScript | stdio | Env var, baked in | 11, hand-written | Yes (GHCR) | Mar 2026 |
-| [paerrin/trilium-mcp-server](https://codeberg.org/paerrin/trilium-mcp-server) | Node.js/TS | stdio | Config file, multi-instance | 24, hand-written | No | Jan 2026 |
-| [radonx/mcp-trilium](https://github.com/radonx/mcp-trilium) | JavaScript | stdio | Env var, baked in | 4, hand-written | No | Aug 2025 |
+| Project                                                                             | Language   | Transport           | Token handling                                          | Tools                           | Docker image         | Latest activity |
+| ----------------------------------------------------------------------------------- | ---------- | ------------------- | ------------------------------------------------------- | ------------------------------- | -------------------- | --------------- |
+| **trilium-mcp** (this)                                                              | Python     | Streamable **HTTP** | Per-request `Authorization` pass-through (multi-tenant) | **~40**, generated from OpenAPI | Yes (sidecar + GHCR) | active          |
+| [tan-yong-sheng/triliumnext-mcp](https://github.com/tan-yong-sheng/triliumnext-mcp) | TypeScript | stdio               | Env var, baked in                                       | 11, hand-written                | Yes (GHCR)           | Mar 2026        |
+| [paerrin/trilium-mcp-server](https://codeberg.org/paerrin/trilium-mcp-server)       | Node.js/TS | stdio               | Config file, multi-instance                             | 24, hand-written                | No                   | Jan 2026        |
+| [radonx/mcp-trilium](https://github.com/radonx/mcp-trilium)                         | JavaScript | stdio               | Env var, baked in                                       | 4, hand-written                 | No                   | Aug 2025        |
 
 **Maintenance** (as of July 2026): [tan-yong-sheng/triliumnext-mcp](https://github.com/tan-yong-sheng/triliumnext-mcp)
 is the most active and popular (≈63 stars, last commit March 2026), though it labels itself a
