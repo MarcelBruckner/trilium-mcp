@@ -1,5 +1,9 @@
-' Shared modern/clean theme for the trilium-mcp diagrams.
-' Indigo accent, neutral greys, no shadows, rounded corners.
+' Shared theme for the trilium-mcp diagrams.
+' Palette taken from the Trilium flower logo:
+'   green  #4CA53E  (primary accent)   light #E8F5E4
+'   orange #E6832E                     light #FBEEDF
+'   red    #DA3B33                     light #FBE6E4
+' Neutrals: slate greys. No shadows, rounded corners.
 ' Included by the .puml files via `!include theme.iuml`.
 
 skinparam backgroundColor #FFFFFF
@@ -11,7 +15,7 @@ skinparam roundCorner 12
 skinparam titleFontColor #0F172A
 skinparam titleFontSize 16
 
-skinparam ArrowColor #6366F1
+skinparam ArrowColor #4CA53E
 skinparam ArrowFontColor #475569
 
 ' --- component / deployment ---
@@ -26,8 +30,8 @@ skinparam database {
     FontColor #1E293B
 }
 skinparam actor {
-    BackgroundColor #EEF2FF
-    BorderColor #6366F1
+    BackgroundColor #F1F5F9
+    BorderColor #64748B
     FontColor #1E293B
 }
 
@@ -36,17 +40,17 @@ skinparam sequence {
     ArrowThickness 1
     LifeLineBorderColor #CBD5E1
     LifeLineBackgroundColor #F8FAFC
-    ParticipantBorderColor #6366F1
-    ParticipantBackgroundColor #EEF2FF
+    ParticipantBorderColor #CBD5E1
+    ParticipantBackgroundColor #FFFFFF
     ParticipantFontColor #1E293B
-    ActorBorderColor #6366F1
-    ActorBackgroundColor #EEF2FF
+    ActorBorderColor #64748B
+    ActorBackgroundColor #F1F5F9
     BoxBorderColor #CBD5E1
     BoxBackgroundColor #F8FAFC
     GroupBorderColor #CBD5E1
     GroupBackgroundColor #F1F5F9
     GroupHeaderFontColor #0F172A
-    DividerBackgroundColor #EEF2FF
+    DividerBackgroundColor #E8F5E4
     DividerBorderColor #CBD5E1
     DividerFontColor #0F172A
 }

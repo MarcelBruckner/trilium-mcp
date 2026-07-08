@@ -9,9 +9,9 @@ autonumber
 actor "MCP client\n(Claude Code, …)" as Client
 
 box "trilium-mcp (this repo)"
-    participant "TokenCapture\nMiddleware\n(ASGI)" as MW
-    participant "FastMCP\n(OpenAPI-derived tools)" as MCP
-    participant "httpx client\n+ EtapiTokenAuth" as HTTP
+    participant "TokenCapture\nMiddleware\n(ASGI)" as MW #FBEEDF
+    participant "FastMCP\n(OpenAPI-derived tools)" as MCP #E8F5E4
+    participant "httpx client\n+ EtapiTokenAuth" as HTTP #FBE6E4
 end box
 
 participant "Trilium\nETAPI" as Trilium
