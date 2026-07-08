@@ -6,10 +6,17 @@
 # Local config with secrets
 .env
 *.token
-etapi.token
+# ...except the throwaway dev token for the seeded local Trilium (see docker-compose.yaml).
+# Scoped to that disposable instance, which holds only Trilium's default demo notes.
+!etapi.token
 
-# Trilium data volume
-trilium-data/
+# Trilium dev fixture (trilium-data/) is committed as a seeded throwaway instance.
+# Ignore only the volatile per-run files so each checkout starts clean.
+trilium-data/log/
+trilium-data/tmp/
+trilium-data/session_secret.txt
+trilium-data/*.db-shm
+trilium-data/*.db-wal
 
 # Superpowers design docs (brainstorming specs / implementation plans) — local only
 docs/superpowers/
