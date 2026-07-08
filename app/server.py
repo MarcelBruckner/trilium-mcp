@@ -25,7 +25,7 @@ MCP_PATH_ENV = "MCP_PATH"                  # HTTP path the MCP endpoint is serve
 
 DEFAULT_SERVER_URL = "http://trilium:8080"
 DEFAULT_HOST = "0.0.0.0"
-DEFAULT_PORT = 8000
+DEFAULT_PORT = 8081
 DEFAULT_PATH = "/mcp"
 HEALTH_PATH = "/health"
 

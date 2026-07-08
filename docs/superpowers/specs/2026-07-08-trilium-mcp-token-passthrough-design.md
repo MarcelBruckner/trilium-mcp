@@ -46,7 +46,7 @@ behind the user's existing Caddy reverse proxy.
 ## Architecture
 
 ```
-MCP client ──https──▶ Caddy ──http──▶ trilium-mcp:8000 ──http (ETAPI)──▶ trilium:8080
+MCP client ──https──▶ Caddy ──http──▶ trilium-mcp:8081 ──http (ETAPI)──▶ trilium:8080
   Authorization: Bearer <ETAPI_TOKEN>          │ forwards raw token as Authorization
                                                 ▼
                           one container per Trilium (TRILIUM_SERVER_URL fixed)
@@ -95,13 +95,13 @@ endpoint and supplies the token for calls.
 
 All non-secret:
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
+| Variable             | Default               | Purpose                                   |
+| -------------------- | --------------------- | ----------------------------------------- |
 | `TRILIUM_SERVER_URL` | `http://trilium:8080` | Fixed target Trilium (`/etapi` appended). |
-| `MCP_HOST` | `0.0.0.0` | Bind interface. |
-| `MCP_PORT` | `8000` | Listen port. |
-| `MCP_PATH` | `/mcp` | MCP endpoint path. |
-| `TRILIUM_ETAPI_SPEC` | bundled spec | Override spec path. |
+| `MCP_HOST`           | `0.0.0.0`             | Bind interface.                           |
+| `MCP_PORT`           | `8081`                | Listen port.                              |
+| `MCP_PATH`           | `/mcp`                | MCP endpoint path.                        |
+| `TRILIUM_ETAPI_SPEC` | bundled spec          | Override spec path.                       |
 
 Removed: `TRILIUM_ETAPI_TOKEN`, `MCP_AUTH_TOKEN`.
 
@@ -109,11 +109,11 @@ Removed: `TRILIUM_ETAPI_TOKEN`, `MCP_AUTH_TOKEN`.
 
 - `docker-compose.yaml`: `mcp` service drops the secret env (`TRILIUM_ETAPI_TOKEN`,
   `MCP_AUTH_TOKEN`); keeps `TRILIUM_SERVER_URL: http://trilium:8080`, healthcheck, and
-  `depends_on`. Publishing `8000:8000` becomes optional — note that Caddy on the shared Docker
-  network can reach `mcp:8000` directly without publishing to the host.
+  `depends_on`. Publishing `8081:8081` becomes optional — note that Caddy on the shared Docker
+  network can reach `mcp:8081` directly without publishing to the host.
 - Delete `.env.example` (no server secrets) and remove the `.env` usage. Keep `.gitignore`
   entries for `.env`/`*.token` as defence-in-depth.
-- README: rewrite the auth section for pass-through; add a Caddy `reverse_proxy mcp:8000`
+- README: rewrite the auth section for pass-through; add a Caddy `reverse_proxy mcp:8081`
   snippet; document the install command:
   ```
   claude mcp add trilium --transport http \

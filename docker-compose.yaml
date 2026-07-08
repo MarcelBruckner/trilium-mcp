@@ -34,12 +34,12 @@ services:
       # The ETAPI token is supplied per request by the MCP client, not here.
       TRILIUM_SERVER_URL: http://trilium:8080
     # Optional: only needed if clients/reverse-proxy reach the MCP server from
-    # the host. A Caddy container on this network can reach mcp:8000 directly.
+    # the host. A Caddy container on this network can reach mcp:8081 directly.
     ports:
-      # MCP endpoint at http://localhost:8000/mcp
-      - '8000:8000'
+      # MCP endpoint at http://localhost:8081/mcp
+      - '8081:8081'
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8081/health" ]
       interval: 30s
       timeout: 5s
       retries: 5

@@ -31,7 +31,7 @@ COPY app/server.py app/trillium-etapi.openapi ./
 # Put the venv on PATH so `python` is the venv interpreter.
 ENV PATH="/app/.venv/bin:$PATH"
 
-EXPOSE 8000
+EXPOSE 8081
 
 # All configuration is via environment variables (see README / docker-compose).
 CMD ["python", "server.py"]

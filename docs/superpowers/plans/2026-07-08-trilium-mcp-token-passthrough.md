@@ -512,13 +512,13 @@ In `docker-compose.yaml`, replace the `mcp` service `environment:` block so it c
       TRILIUM_SERVER_URL: http://trilium:8080
 ```
 
-Add a comment above the `ports:` block noting publishing is optional when a reverse proxy on the same Docker network reaches `mcp:8000` directly:
+Add a comment above the `ports:` block noting publishing is optional when a reverse proxy on the same Docker network reaches `mcp:8081` directly:
 
 ```yaml
     # Optional: only needed if clients/reverse-proxy reach the MCP server from
-    # the host. A Caddy container on this network can reach mcp:8000 directly.
+    # the host. A Caddy container on this network can reach mcp:8081 directly.
     ports:
-      - '8000:8000'
+      - '8081:8081'
 ```
 
 Leave `build`, `restart`, `depends_on`, and `healthcheck` unchanged.
@@ -602,11 +602,11 @@ c) Add a **Reverse proxy (Caddy)** snippet:
 ````markdown
 ## TLS / reverse proxy
 
-The container serves plain HTTP on `:8000`; terminate TLS at your reverse proxy. Example Caddyfile:
+The container serves plain HTTP on `:8081`; terminate TLS at your reverse proxy. Example Caddyfile:
 
 ```
 your-host {
-    reverse_proxy mcp:8000
+    reverse_proxy mcp:8081
 }
 ```
 ````
@@ -639,14 +639,14 @@ docker compose ps   # both trilium and mcp -> healthy
 - [ ] **Step 2: Health + missing-auth gate**
 
 ```bash
-curl -s -o /dev/null -w "health=%{http_code}\n" http://localhost:8000/health          # 200
-curl -s -o /dev/null -w "no-auth=%{http_code}\n" -X POST http://localhost:8000/mcp \
+curl -s -o /dev/null -w "health=%{http_code}\n" http://localhost:8081/health          # 200
+curl -s -o /dev/null -w "no-auth=%{http_code}\n" -X POST http://localhost:8081/mcp \
   -H 'content-type: application/json' -d '{}'                                          # 401
 ```
 
 - [ ] **Step 3: Authenticated tool calls (read + write + cleanup)**
 
-Use the real ETAPI token (`TOKEN="$(sed -n 's/^TRILIUM_ETAPI_TOKEN=//p' .env)"` if it still exists, otherwise read it from Trilium → Options → ETAPI). Run a FastMCP client against `http://localhost:8000/mcp` with `auth=f"Bearer {TOKEN}"`:
+Use the real ETAPI token (`TOKEN="$(sed -n 's/^TRILIUM_ETAPI_TOKEN=//p' .env)"` if it still exists, otherwise read it from Trilium → Options → ETAPI). Run a FastMCP client against `http://localhost:8081/mcp` with `auth=f"Bearer {TOKEN}"`:
 
 ```bash
 cd app
@@ -655,7 +655,7 @@ import os, asyncio
 from fastmcp import Client
 
 async def main():
-    c = Client('http://localhost:8000/mcp', auth='Bearer ' + os.environ['TOKEN'])
+    c = Client('http://localhost:8081/mcp', auth='Bearer ' + os.environ['TOKEN'])
     async with c:
         print('tools:', len(await c.list_tools()))
         print('appinfo ok:', bool((await c.call_tool('getAppInfo', {})).data))
@@ -685,7 +685,7 @@ import os, asyncio
 from fastmcp import Client
 
 async def main():
-    c = Client('http://localhost:8000/mcp', auth='Bearer ' + os.environ['TOKEN'])
+    c = Client('http://localhost:8081/mcp', auth='Bearer ' + os.environ['TOKEN'])
     async with c:
         for term in ('mcp-e2e-raw','mcp-e2e-test','e2e'):
             res = (await c.call_tool('searchNotes', {'search': term})).data

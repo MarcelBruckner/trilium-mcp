@@ -30,7 +30,7 @@ never exposed publicly on its own.
    ```
    docker compose up -d --build
    ```
-   The MCP endpoint is then available at `http://localhost:8000/mcp`.
+   The MCP endpoint is then available at `http://localhost:8081/mcp`.
 
 ## Connecting a client
 
@@ -58,12 +58,12 @@ Alternatively, use the provided [`.mcp.json`](.mcp.json), filling in your host a
 
 ## TLS / reverse proxy
 
-The container serves plain HTTP on `:8000`; terminate TLS at your reverse proxy.
+The container serves plain HTTP on `:8081`; terminate TLS at your reverse proxy.
 Example Caddyfile:
 
 ```
 your-host {
-    reverse_proxy mcp:8000
+    reverse_proxy mcp:8081
 }
 ```
 
@@ -71,13 +71,13 @@ your-host {
 
 All configuration is via environment variables:
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
+| Variable             | Default               | Purpose                                                                |
+| -------------------- | --------------------- | ---------------------------------------------------------------------- |
 | `TRILIUM_SERVER_URL` | `http://trilium:8080` | Base URL of the Trilium instance (`/etapi` is appended automatically). |
-| `MCP_HOST` | `0.0.0.0` | Interface the MCP server binds to. |
-| `MCP_PORT` | `8000` | Port the MCP server listens on. |
-| `MCP_PATH` | `/mcp` | HTTP path the MCP endpoint is served at. |
-| `TRILIUM_ETAPI_SPEC` | bundled spec | Override the OpenAPI spec path. |
+| `MCP_HOST`           | `0.0.0.0`             | Interface the MCP server binds to.                                     |
+| `MCP_PORT`           | `8081`                | Port the MCP server listens on.                                        |
+| `MCP_PATH`           | `/mcp`                | HTTP path the MCP endpoint is served at.                               |
+| `TRILIUM_ETAPI_SPEC` | bundled spec          | Override the OpenAPI spec path.                                        |
 
 ## Security
 
