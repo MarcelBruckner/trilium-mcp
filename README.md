@@ -46,15 +46,8 @@ straight through to Trilium. Each client presents its own token per request.
   <img src="docs/create-etapi.png" alt="Trilium Options → ETAPI screen with the Create new ETAPI token button" width="720">
 </p>
 
-**2. Start trilium-mcp.** Pick whichever matches your setup:
-
-<details open>
-<summary><b>You already run Trilium with Docker Compose</b></summary>
-
-<p></p>
-
-Add one service to your existing `docker-compose.yaml` — it pulls the prebuilt image, so
-there's nothing to clone or build:
+**2. Add trilium-mcp to your Trilium's `docker-compose.yaml`** — one service, pulling the
+prebuilt image, so there's nothing to clone or build:
 
 ```yaml
 services:
@@ -80,26 +73,7 @@ docker compose up -d trilium-mcp
 Both services share the compose network, so `trilium` resolves to your existing container. If
 your Trilium runs elsewhere (a separate compose project or host), point `TRILIUM_SERVER_URL` at a
 URL this container can reach and attach it to the right network — see [Configuration](#configuration).
-
-</details>
-
-<details>
-<summary><b>You want a fresh Trilium + trilium-mcp stack</b></summary>
-
-<p></p>
-
-Clone this repo and bring up both services together (the bundled
-[`docker-compose.yaml`](docker-compose.yaml) defines them):
-
-```bash
-git clone https://github.com/MarcelBruckner/trilium-mcp.git
-cd trilium-mcp
-docker compose up -d
-```
-
-</details>
-
-Either way, the MCP endpoint is then available at `http://localhost:8081/mcp`.
+The MCP endpoint is then available at `http://localhost:8081/mcp`.
 
 **3. Connect your MCP client** with the token from step 1:
 
@@ -242,7 +216,6 @@ has had no commits since August 2025 (~3 commits total, 1 star) and **appears ab
 ## Layout
 
 ```
-docker-compose.yaml      trilium + mcp sidecar
 Dockerfile               builds the MCP server image (uv-based)
 .mcp.json                example MCP client config
 app/

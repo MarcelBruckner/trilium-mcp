@@ -33,5 +33,5 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8081
 
-# All configuration is via environment variables (see README / docker-compose).
+# All configuration is via environment variables (see README).
 CMD ["python", "server.py"]
