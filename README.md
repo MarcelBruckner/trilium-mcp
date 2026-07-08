@@ -24,6 +24,7 @@ client connects to it by URL.
 - [How it works](#how-it-works)
 - [Alternatives](#alternatives)
 - [Layout](#layout)
+- [Contributing](#contributing)
 
 ## Architecture
 
@@ -233,3 +234,10 @@ app/
   uv.lock
   trilium-etapi.openapi  bundled Trilium ETAPI OpenAPI spec
 ```
+
+## Contributing
+
+For local development there's a ready-to-run stack — a throwaway Trilium seeded
+with the default demo notes plus the MCP server built from local source
+(`docker compose up -d --build`). See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+dev setup, seed-instance credentials, and how to run the tests.
