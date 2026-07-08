@@ -4,8 +4,8 @@ title Trilium ETAPI MCP — deployment
 left to right direction
 skinparam linetype ortho
 skinparam shadowing false
-skinparam nodesep 40
-skinparam ranksep 55
+skinparam nodesep 50
+skinparam ranksep 130
 skinparam defaultTextAlignment center
 skinparam rectangle {
     BackgroundColor #F5F7FA
