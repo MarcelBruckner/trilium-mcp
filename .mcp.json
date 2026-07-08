@@ -2,9 +2,9 @@
   "mcpServers": {
     "trilium": {
       "type": "http",
-      "url": "http://localhost:8000/mcp",
+      "url": "https://your-host/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_MCP_AUTH_TOKEN"
+        "Authorization": "Bearer YOUR_TRILIUM_ETAPI_TOKEN"
       }
     }
   }

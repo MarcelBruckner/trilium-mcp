@@ -21,9 +21,11 @@ never exposed publicly on its own.
 ## Setup
 
 1. **Create an ETAPI token** in Trilium: *Options → ETAPI → Create new ETAPI token*.
-2. **Configure** — copy `.env.example` to `.env` and fill in:
-   - `TRILIUM_ETAPI_TOKEN` (required)
-   - `MCP_AUTH_TOKEN` (optional bearer token protecting the MCP endpoint — see Security)
+   This token is the only credential — the server itself stores no secret. Each
+   client presents its own token per request as `Authorization: Bearer <token>`,
+   and the server forwards the raw token straight through to Trilium's ETAPI.
+2. **Configure** the deployment via environment variables (see Configuration below) —
+   at minimum `TRILIUM_SERVER_URL` pointing at your Trilium instance.
 3. **Run** both Trilium and the sidecar:
    ```
    docker compose up -d --build
@@ -32,15 +34,38 @@ never exposed publicly on its own.
 
 ## Connecting a client
 
-The MCP endpoint speaks streamable HTTP. For Claude Code:
+The ETAPI token you create in Trilium (Options → ETAPI) is the credential — pass it as
+a bearer header:
+
+```bash
+claude mcp add trilium --transport http \
+  --header "Authorization: Bearer YOUR_TRILIUM_ETAPI_TOKEN" \
+  https://your-host/mcp
+```
+
+Register multiple instances by repeating with a different URL + token:
+
+```bash
+claude mcp add trilium-work --transport http \
+  --header "Authorization: Bearer WORK_TOKEN" \
+  https://work-host/mcp
+```
+
+All of them use the same trilium-mcp image; each deployment is bound to one Trilium via
+`TRILIUM_SERVER_URL`.
+
+Alternatively, use the provided [`.mcp.json`](.mcp.json), filling in your host and token.
+
+## TLS / reverse proxy
+
+The container serves plain HTTP on `:8000`; terminate TLS at your reverse proxy.
+Example Caddyfile:
 
 ```
-claude mcp add --transport http trilium http://localhost:8000/mcp \
-  --header "Authorization: Bearer YOUR_MCP_AUTH_TOKEN"
+your-host {
+    reverse_proxy mcp:8000
+}
 ```
-
-Or use the provided [`.mcp.json`](.mcp.json) (drop the `headers` block if you did not set
-`MCP_AUTH_TOKEN`).
 
 ## Configuration
 
@@ -48,9 +73,7 @@ All configuration is via environment variables:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `TRILIUM_ETAPI_TOKEN` | *(required)* | Trilium ETAPI token, sent in the `Authorization` header to Trilium. |
 | `TRILIUM_SERVER_URL` | `http://trilium:8080` | Base URL of the Trilium instance (`/etapi` is appended automatically). |
-| `MCP_AUTH_TOKEN` | *(unset)* | If set, clients must send `Authorization: Bearer <token>`. |
 | `MCP_HOST` | `0.0.0.0` | Interface the MCP server binds to. |
 | `MCP_PORT` | `8000` | Port the MCP server listens on. |
 | `MCP_PATH` | `/mcp` | HTTP path the MCP endpoint is served at. |
@@ -58,25 +81,30 @@ All configuration is via environment variables:
 
 ## Security
 
-The MCP endpoint grants **full read/write access to your notes**. When it is reachable
-beyond localhost (e.g. behind a reverse proxy), set `MCP_AUTH_TOKEN` so clients must
-present a bearer token, and/or restrict access at the network layer. Without the token
-the endpoint is open. The `/health` endpoint is always unauthenticated (used by the
-container healthcheck).
+The MCP endpoint grants **full read/write access to your notes**. Every request must
+carry a valid Trilium ETAPI token in the `Authorization` header; requests with no
+`Authorization` header at all are rejected with `401` before reaching any tool. The
+server never validates the token itself — validity is enforced by Trilium when the
+forwarded request reaches the actual ETAPI call, and the server holds no secret of its
+own. The `/health` endpoint is always unauthenticated (used by the container
+healthcheck).
 
-If `TRILIUM_ETAPI_TOKEN` is missing or the spec cannot be loaded, the server still
-starts and completes the MCP handshake, but exposes only a single `startup_error` tool
-describing how to fix it (rather than failing with an opaque connection error).
+Because the token is forwarded as-is on every call, only run this behind TLS: put the
+Caddy (or other) reverse proxy in front and let it terminate TLS, so the token never
+travels over plain HTTP outside the trusted Docker network.
+
+If the OpenAPI spec cannot be loaded at startup, the server still starts and completes
+the MCP handshake, but exposes only a single `startup_error` tool describing how to fix
+it (rather than failing with an opaque connection error).
 
 ## Layout
 
 ```
 docker-compose.yaml      trilium + mcp sidecar
 Dockerfile               builds the MCP server image (uv-based)
-.env.example             configuration template
 .mcp.json                example MCP client config
 app/
-  server.py              the MCP server (OpenAPI-driven, HTTP transport, bearer auth)
+  server.py              the MCP server (OpenAPI-driven, HTTP transport, token pass-through)
   pyproject.toml         dependencies
   uv.lock
   trillium-etapi.openapi bundled Trilium ETAPI OpenAPI spec
