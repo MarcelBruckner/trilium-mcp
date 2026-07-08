@@ -47,18 +47,22 @@ def token_missing_message() -> str:
 
 
 class EtapiTokenAuth(httpx.Auth):
-    """httpx auth flow that attaches the Trilium ETAPI token.
+    """Forward the client-supplied ETAPI token to Trilium.
 
-    Trilium's ETAPI expects the raw token as the value of the Authorization
-    header (an apiKey scheme, not a 'Bearer' JWT) -- see the EtapiTokenAuth
-    security scheme in the OpenAPI spec.
+    The token arrives per-request in the `_incoming_auth` contextvar (set by
+    TokenCaptureMiddleware). Trilium's ETAPI expects the raw token as the
+    Authorization value, so we strip a leading 'Bearer ' if the client sent one.
     """
 
-    def __init__(self, token: str) -> None:
-        self._token = token
-
     def auth_flow(self, request: httpx.Request):
-        request.headers["Authorization"] = self._token
+        raw = _incoming_auth.get()
+        if not raw:
+            raise RuntimeError(
+                "No client Authorization header available for the ETAPI call."
+            )
+        if raw[:7].lower() == "bearer ":
+            raw = raw[7:].strip()
+        request.headers["Authorization"] = raw
         yield request
 
 

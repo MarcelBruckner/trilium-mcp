@@ -1,0 +1,40 @@
+import httpx
+import pytest
+
+import server
+
+
+def _run_auth(header_value):
+    reset = server._incoming_auth.set(header_value)
+    try:
+        auth = server.EtapiTokenAuth()
+        request = httpx.Request("GET", "http://trilium:8080/etapi/app-info")
+        return next(auth.auth_flow(request))
+    finally:
+        server._incoming_auth.reset(reset)
+
+
+def test_strips_bearer_prefix():
+    out = _run_auth("Bearer secret-token")
+    assert out.headers["Authorization"] == "secret-token"
+
+
+def test_bearer_prefix_case_insensitive():
+    out = _run_auth("bearer secret-token")
+    assert out.headers["Authorization"] == "secret-token"
+
+
+def test_raw_token_passthrough():
+    out = _run_auth("raw-token-no-prefix")
+    assert out.headers["Authorization"] == "raw-token-no-prefix"
+
+
+def test_missing_token_raises():
+    reset = server._incoming_auth.set(None)
+    try:
+        auth = server.EtapiTokenAuth()
+        request = httpx.Request("GET", "http://trilium:8080/etapi/app-info")
+        with pytest.raises(RuntimeError):
+            next(auth.auth_flow(request))
+    finally:
+        server._incoming_auth.reset(reset)
