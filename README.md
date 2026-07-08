@@ -112,6 +112,15 @@ claude mcp add trilium-work --transport http \
   --header "Authorization: WORK_TOKEN"
 ```
 
+By default `claude mcp add` registers the server in **local** scope — available only to you in the
+current project. To make Trilium available across **all** your projects, add `--scope user`:
+
+```bash
+claude mcp add trilium --scope user --transport http \
+  http://localhost:8081/mcp \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN"
+```
+
 The raw token is what Trilium's ETAPI expects. A `Bearer ` prefix is also accepted (it is
 stripped before the request is forwarded), so `Authorization: Bearer YOUR_TOKEN` works too.
 
