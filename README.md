@@ -11,13 +11,12 @@ client connects to it by URL.
 ## Contents
 
 - [Architecture](#architecture)
-- [How a request flows](#how-a-request-flows)
-- [Setup](#setup)
-- [Adding to an existing Trilium](#adding-to-an-existing-trilium)
+- [Quick start](#quick-start)
 - [Connecting a client](#connecting-a-client)
-- [TLS / reverse proxy](#tls--reverse-proxy)
 - [Configuration](#configuration)
+- [TLS / reverse proxy](#tls--reverse-proxy)
 - [Security](#security)
+- [How it works](#how-it-works)
 - [Layout](#layout)
 
 ## Architecture
@@ -31,57 +30,30 @@ Docker network, so Trilium's ETAPI is never exposed publicly on its own. Clients
 either through a TLS-terminating reverse proxy or directly over a trusted LAN — in both cases the
 ETAPI token they present is the only credential.
 
-## How a request flows
+## Quick start
 
-At a glance, trilium-mcp forwards the client's ETAPI token straight through to Trilium:
+**1. Create an ETAPI token in Trilium** — *Options → ETAPI → Create new ETAPI token*.
+This token is the only credential: trilium-mcp stores no secret and forwards the raw token
+straight through to Trilium. Each client presents its own token per request.
 
 <p align="center">
-  <img src="docs/sequence-overview.png" alt="Client sends a tool call with an ETAPI token; trilium-mcp forwards it to Trilium and returns the result" width="560">
+  <img src="docs/create-etapi.png" alt="Trilium Options → ETAPI screen with the Create new ETAPI token button" width="720">
 </p>
 
-<details>
-<summary>Detailed sequence (startup, auth gate, token pass-through)</summary>
+**2. Start trilium-mcp.** Pick whichever matches your setup:
+
+<details open>
+<summary><b>You already run Trilium with Docker Compose</b></summary>
 
 <p></p>
 
-Startup builds the tools from the OpenAPI spec, the middleware rejects any request without an
-`Authorization` header, and the token is carried per request from the middleware to the outgoing
-ETAPI call:
-
-<p align="center">
-  <img src="docs/sequence.png" alt="Detailed sequence: startup, health check, missing-token rejection, and an authenticated tool call" width="720">
-</p>
-
-</details>
-
-## Setup
-
-1. **Create an ETAPI token** in Trilium: *Options → ETAPI → Create new ETAPI token*.
-   This token is the only credential — the server itself stores no secret. Each
-   client presents its own token per request as `Authorization: Bearer <token>`,
-   and the server forwards the raw token straight through to Trilium's ETAPI.
-
-   <p align="center">
-     <img src="docs/create-etapi.png" alt="Trilium Options → ETAPI screen with the Create new ETAPI token button" width="720">
-   </p>
-
-2. **Configure** the deployment via environment variables (see Configuration below) —
-   at minimum `TRILIUM_SERVER_URL` pointing at your Trilium instance.
-3. **Run** both Trilium and trilium-mcp:
-   ```
-   docker compose up -d --build
-   ```
-   The MCP endpoint is then available at `http://localhost:8081/mcp`.
-
-## Adding to an existing Trilium
-
-Already running Trilium with Docker Compose? Add this one service to that
-`docker-compose.yaml` — it pulls the prebuilt image, so there's nothing to clone or build:
+Add one service to your existing `docker-compose.yaml` — it pulls the prebuilt image, so
+there's nothing to clone or build:
 
 ```yaml
 services:
   trilium:
-    ...
+    # ... your existing Trilium service ...
 
   trilium-mcp:
     image: ghcr.io/marcelbruckner/trilium-mcp:latest
@@ -93,23 +65,66 @@ services:
       - "8081:8081"
 ```
 
-Then `docker compose up -d trilium-mcp`. Because both services share the compose network,
-`trilium` resolves to your existing container. If your Trilium runs elsewhere (a separate
-compose project or host), point `TRILIUM_SERVER_URL` at a URL this container can reach and
-attach it to the right network — see [Configuration](#configuration).
+Then start it:
 
-## Connecting a client
+```bash
+docker compose up -d trilium-mcp
+```
 
-The ETAPI token you create in Trilium (Options → ETAPI) is the credential — pass it in
-the `Authorization` header:
+Both services share the compose network, so `trilium` resolves to your existing container. If
+your Trilium runs elsewhere (a separate compose project or host), point `TRILIUM_SERVER_URL` at a
+URL this container can reach and attach it to the right network — see [Configuration](#configuration).
+
+</details>
+
+<details>
+<summary><b>You want a fresh Trilium + trilium-mcp stack</b></summary>
+
+<p></p>
+
+Clone this repo and bring up both services together (the bundled
+[`docker-compose.yaml`](docker-compose.yaml) defines them):
+
+```bash
+git clone https://github.com/MarcelBruckner/trilium-mcp.git
+cd trilium-mcp
+docker compose up -d
+```
+
+</details>
+
+Either way, the MCP endpoint is then available at `http://localhost:8081/mcp`.
+
+**3. Connect your MCP client** with the token from step 1:
 
 ```bash
 claude mcp add trilium --transport http \
   --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
-  https://your-host/mcp
+  http://localhost:8081/mcp
 ```
 
-Register multiple instances by repeating with a different URL + token:
+Your client now has the Trilium tools. See [Connecting a client](#connecting-a-client) for
+remote hosts, multiple instances, and `.mcp.json`.
+
+## Connecting a client
+
+The ETAPI token is the credential — pass it in the `Authorization` header. Point the URL at
+wherever trilium-mcp is reachable (a TLS reverse proxy, or the container directly on a trusted LAN):
+
+```bash
+# Behind a reverse proxy (TLS)
+claude mcp add trilium --transport http \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
+  https://your-host/mcp
+
+# Directly over a trusted LAN (plain HTTP), by IP or hostname
+claude mcp add trilium --transport http \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
+  http://192.168.1.50:8081/mcp
+```
+
+Register **multiple instances** by repeating with a different URL + token; each deployment uses
+the same image and is bound to one Trilium via `TRILIUM_SERVER_URL`:
 
 ```bash
 claude mcp add trilium-work --transport http \
@@ -120,30 +135,7 @@ claude mcp add trilium-work --transport http \
 The raw token is what Trilium's ETAPI expects. A `Bearer ` prefix is also accepted (it is
 stripped before the request is forwarded), so `Authorization: Bearer YOUR_TOKEN` works too.
 
-All of them use the same trilium-mcp image; each deployment is bound to one Trilium via
-`TRILIUM_SERVER_URL`.
-
-On a trusted LAN you can also connect straight to the container over plain HTTP (no reverse
-proxy), by IP or hostname:
-
-```bash
-claude mcp add trilium --transport http \
-  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
-  http://192.168.1.50:8081/mcp
-```
-
 Alternatively, use the provided [`.mcp.json`](.mcp.json), filling in your host and token.
-
-## TLS / reverse proxy
-
-The container serves plain HTTP on `:8081`; terminate TLS at your reverse proxy.
-Example Caddyfile:
-
-```
-your-host {
-    reverse_proxy mcp:8081
-}
-```
 
 ## Configuration
 
@@ -157,6 +149,17 @@ All configuration is via environment variables:
 | `MCP_PATH`           | `/mcp`                | HTTP path the MCP endpoint is served at.                                                                 |
 | `TRILIUM_ETAPI_SPEC` | bundled spec          | Override the OpenAPI spec path.                                                                          |
 | `MCP_ALLOWED_HOSTS`  | *(unset = any)*       | Comma-separated `Host` allowlist (DNS-rebinding protection). Unset accepts any Host; set it to restrict. |
+
+## TLS / reverse proxy
+
+The container serves plain HTTP on `:8081`; terminate TLS at your reverse proxy.
+Example Caddyfile:
+
+```
+your-host {
+    reverse_proxy mcp:8081
+}
+```
 
 ## Security
 
@@ -183,6 +186,29 @@ host[:port] values you actually use (e.g. `192.168.1.50:8081,trilium.example.com
 If the OpenAPI spec cannot be loaded at startup, the server still starts and completes
 the MCP handshake, but exposes only a single `startup_error` tool describing how to fix
 it (rather than failing with an opaque connection error).
+
+## How it works
+
+At a glance, trilium-mcp forwards the client's ETAPI token straight through to Trilium:
+
+<p align="center">
+  <img src="docs/sequence-overview.png" alt="Client sends a tool call with an ETAPI token; trilium-mcp forwards it to Trilium and returns the result" width="560">
+</p>
+
+<details>
+<summary>Detailed sequence (startup, auth gate, token pass-through)</summary>
+
+<p></p>
+
+Startup builds the tools from the OpenAPI spec, the middleware rejects any request without an
+`Authorization` header, and the token is carried per request from the middleware to the outgoing
+ETAPI call:
+
+<p align="center">
+  <img src="docs/sequence.png" alt="Detailed sequence: startup, health check, missing-token rejection, and an authenticated tool call" width="720">
+</p>
+
+</details>
 
 ## Layout
 
