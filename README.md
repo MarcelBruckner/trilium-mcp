@@ -76,15 +76,15 @@ ETAPI call:
 ## Adding to an existing Trilium
 
 Already running Trilium with Docker Compose? Add this one service to that
-`docker-compose.yaml` — it builds straight from the repo, so there's nothing to clone:
+`docker-compose.yaml` — it pulls the prebuilt image, so there's nothing to clone or build:
 
 ```yaml
 services:
   trilium:
     ...
-    
+
   trilium-mcp:
-    build: https://github.com/MarcelBruckner/trilium-mcp.git
+    image: ghcr.io/marcelbruckner/trilium-mcp:latest
     restart: unless-stopped
     environment:
       # Service name of your existing Trilium on the same compose network.
