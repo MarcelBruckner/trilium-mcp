@@ -239,6 +239,22 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
     spec_path = Path(os.environ.get(SPEC_ENV, str(DEFAULT_SPEC)))
     spec = load_spec(spec_path)
 
+    # Two ETAPI endpoints don't fit FastMCP's JSON-in/JSON-out assumption, and
+    # they need different fixes because they fail at different layers:
+    #
+    #   * text/html (getNoteContent, ...) -- a *metadata* problem. FastMCP's tool
+    #     already returns the right thing (response.json() raises the *caught*
+    #     JSONDecodeError, so it falls back to returning the text body); it just
+    #     leaves an output schema attached that the MCP layer then rejects.
+    #     Fixable by clearing the schema -> mcp_component_fn (build-time tweak).
+    #   * application/zip (exportNoteSubtree) -- a *behavior* problem. The ZIP
+    #     bytes make response.json() raise an *uncaught* UnicodeDecodeError, so
+    #     the tool crashes before any schema is consulted; and raw bytes are
+    #     useless to a client anyway. This needs real logic (fetch + unzip), so
+    #     we exclude the generated tool and replace it -> register_export_tool.
+    #
+    # mcp_component_fn can only adjust component metadata, so it can't fix the
+    # ZIP case; that's why the two are handled separately.
     mcp = FastMCP.from_openapi(
         openapi_spec=spec,
         client=client,
@@ -247,13 +263,12 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
         # strings (e.g. branch.prefix), so response validation would reject
         # otherwise-successful calls. Return the real response instead.
         validate_output=False,
-        # Drop the generated exportNoteSubtree tool (binary ZIP response breaks
-        # FastMCP's JSON parsing); register_export_tool replaces it below.
+        # Behavior fix: drop the generated exportNoteSubtree tool (see above);
+        # register_export_tool replaces it below.
         route_maps=[
             RouteMap(methods=["GET"], pattern=r"/export$", mcp_type=MCPType.EXCLUDE),
         ],
-        # Non-JSON endpoints (e.g. text/html note content) return unstructured
-        # text; clear their output schema so the MCP layer accepts it.
+        # Metadata fix: clear the output schema on non-JSON tools (see above).
         mcp_component_fn=drop_non_json_output_schema,
     )
     register_export_tool(mcp, client)
