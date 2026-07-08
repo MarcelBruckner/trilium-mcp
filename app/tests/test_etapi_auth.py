@@ -38,3 +38,23 @@ def test_missing_token_raises():
             next(auth.auth_flow(request))
     finally:
         server._incoming_auth.reset(reset)
+
+
+def test_empty_after_bearer_strip_raises():
+    reset = server._incoming_auth.set("Bearer ")
+    try:
+        with pytest.raises(RuntimeError):
+            next(server.EtapiTokenAuth().auth_flow(
+                httpx.Request("GET", "http://trilium:8080/etapi/app-info")))
+    finally:
+        server._incoming_auth.reset(reset)
+
+
+def test_bearer_with_only_whitespace_raises():
+    reset = server._incoming_auth.set("Bearer     ")
+    try:
+        with pytest.raises(RuntimeError):
+            next(server.EtapiTokenAuth().auth_flow(
+                httpx.Request("GET", "http://trilium:8080/etapi/app-info")))
+    finally:
+        server._incoming_auth.reset(reset)

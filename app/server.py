@@ -44,12 +44,12 @@ class EtapiTokenAuth(httpx.Auth):
 
     def auth_flow(self, request: httpx.Request):
         raw = _incoming_auth.get()
+        if raw and raw[:7].lower() == "bearer ":
+            raw = raw[7:].strip()
         if not raw:
             raise RuntimeError(
                 "No client Authorization header available for the ETAPI call."
             )
-        if raw[:7].lower() == "bearer ":
-            raw = raw[7:].strip()
         request.headers["Authorization"] = raw
         yield request
 
