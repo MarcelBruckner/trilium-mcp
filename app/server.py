@@ -10,7 +10,7 @@ import httpx
 import uvicorn
 import yaml
 from fastmcp import FastMCP
-from fastmcp.server.providers.openapi import MCPType, RouteMap
+from fastmcp.server.providers.openapi import MCPType, OpenAPITool, RouteMap
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
@@ -138,6 +138,27 @@ def register_health(mcp: FastMCP) -> None:
         return PlainTextResponse("ok")
 
 
+def drop_non_json_output_schema(route, component) -> None:
+    """Clear the output schema on tools whose ETAPI response isn't JSON.
+
+    Endpoints like getNoteContent return text/html, so the generated tool returns
+    plain text with no structured content. FastMCP still attaches an output
+    schema, and the MCP layer then rejects the call with "outputSchema defined
+    but no structured output returned". Dropping the schema lets those text
+    responses pass through. Applied via mcp_component_fn (see build_server).
+    """
+    if not isinstance(component, OpenAPITool):
+        return
+    content_types: list[str] = []
+    for status, info in route.responses.items():
+        # Only the success (2xx) responses decide the real output shape; the
+        # "default" error response is always JSON and must not be counted.
+        if status[:1] == "2":
+            content_types.extend(info.content_schema)
+    if not any("json" in ct.lower() for ct in content_types):
+        component.output_schema = None
+
+
 def register_export_tool(mcp: FastMCP, client: httpx.AsyncClient) -> None:
     """Register a working replacement for the generated exportNoteSubtree tool.
 
@@ -231,6 +252,9 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
         route_maps=[
             RouteMap(methods=["GET"], pattern=r"/export$", mcp_type=MCPType.EXCLUDE),
         ],
+        # Non-JSON endpoints (e.g. text/html note content) return unstructured
+        # text; clear their output schema so the MCP layer accepts it.
+        mcp_component_fn=drop_non_json_output_schema,
     )
     register_export_tool(mcp, client)
     register_health(mcp)

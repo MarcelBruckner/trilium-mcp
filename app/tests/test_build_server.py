@@ -66,6 +66,23 @@ def _mock_client():
     )
 
 
+def _content_client(html: bytes) -> httpx.AsyncClient:
+    """Client whose transport returns text/html for the note-content endpoint,
+    the shape that tripped the output-schema validation before the fix."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/content"):
+            return httpx.Response(
+                200, content=html, headers={"content-type": "text/html"},
+            )
+        return httpx.Response(404, json={"status": 404})
+
+    return httpx.AsyncClient(
+        base_url="http://trilium:8080/etapi",
+        auth=server.EtapiTokenAuth(),
+        transport=httpx.MockTransport(handler),
+    )
+
+
 def test_build_server_needs_no_token_and_builds_tools():
     mcp = server.build_server()
     tools = asyncio.run(mcp.list_tools())
@@ -127,3 +144,21 @@ def test_export_subtree_replaces_generated_tool_exactly_once():
     tools = asyncio.run(mcp.list_tools())
     names = [t.name for t in tools]
     assert names.count("exportNoteSubtree") == 1
+
+
+def test_get_note_content_html_passes_through():
+    from fastmcp import Client
+
+    async def run():
+        reset = server._incoming_auth.set("Bearer test-token")
+        try:
+            mcp = server.build_server(client=_content_client(b"<p>hello</p>"))
+            async with Client(mcp) as c:
+                return await c.call_tool("getNoteContent", {"noteId": "abc123"})
+        finally:
+            server._incoming_auth.reset(reset)
+
+    # Before the fix this raised "outputSchema defined but no structured output
+    # returned" because the text/html response carried no structured content.
+    result = asyncio.run(run())
+    assert result.content[0].text == "<p>hello</p>"
