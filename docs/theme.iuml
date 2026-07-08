@@ -1,0 +1,57 @@
+' Shared modern/clean theme for the trilium-mcp diagrams.
+' Indigo accent, neutral greys, no shadows, rounded corners.
+' Included by the .puml files via `!include theme.iuml`.
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Helvetica
+skinparam defaultFontColor #1E293B
+skinparam shadowing false
+skinparam roundCorner 12
+
+skinparam titleFontColor #0F172A
+skinparam titleFontSize 16
+
+skinparam ArrowColor #6366F1
+skinparam ArrowFontColor #475569
+
+' --- component / deployment ---
+skinparam rectangle {
+    BackgroundColor #FFFFFF
+    BorderColor #CBD5E1
+    FontColor #1E293B
+}
+skinparam database {
+    BackgroundColor #FFFFFF
+    BorderColor #CBD5E1
+    FontColor #1E293B
+}
+skinparam actor {
+    BackgroundColor #EEF2FF
+    BorderColor #6366F1
+    FontColor #1E293B
+}
+
+' --- sequence ---
+skinparam sequence {
+    ArrowThickness 1
+    LifeLineBorderColor #CBD5E1
+    LifeLineBackgroundColor #F8FAFC
+    ParticipantBorderColor #6366F1
+    ParticipantBackgroundColor #EEF2FF
+    ParticipantFontColor #1E293B
+    ActorBorderColor #6366F1
+    ActorBackgroundColor #EEF2FF
+    BoxBorderColor #CBD5E1
+    BoxBackgroundColor #F8FAFC
+    GroupBorderColor #CBD5E1
+    GroupBackgroundColor #F1F5F9
+    GroupHeaderFontColor #0F172A
+    DividerBackgroundColor #EEF2FF
+    DividerBorderColor #CBD5E1
+    DividerFontColor #0F172A
+}
+skinparam note {
+    BackgroundColor #F8FAFC
+    BorderColor #CBD5E1
+    FontColor #475569
+}

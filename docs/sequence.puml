@@ -1,4 +1,5 @@
 @startuml sequence
+!include theme.iuml
 title Trilium ETAPI MCP — request flow (token pass-through)
 
 skinparam responseMessageBelowArrow true
@@ -7,7 +8,7 @@ autonumber
 
 actor "MCP client\n(Claude Code, …)" as Client
 
-box "mcp sidecar (this repo)" #F5F7FA
+box "trilium-mcp (this repo)"
     participant "TokenCapture\nMiddleware\n(ASGI)" as MW
     participant "FastMCP\n(OpenAPI-derived tools)" as MCP
     participant "httpx client\n+ EtapiTokenAuth" as HTTP
