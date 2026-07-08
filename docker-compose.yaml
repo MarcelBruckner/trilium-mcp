@@ -30,12 +30,11 @@ services:
     depends_on:
       - trilium
     environment:
-      # Talk to Trilium over the internal network, not the published port.
+      # Fixed target Trilium (reached over the internal compose network).
+      # The ETAPI token is supplied per request by the MCP client, not here.
       TRILIUM_SERVER_URL: http://trilium:8080
-      # Required: ETAPI token (Trilium -> Options -> ETAPI). Set it in .env.
-      TRILIUM_ETAPI_TOKEN: ${TRILIUM_ETAPI_TOKEN:?set TRILIUM_ETAPI_TOKEN in your .env}
-      # Optional: protect the MCP endpoint with a bearer token (empty = open).
-      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+    # Optional: only needed if clients/reverse-proxy reach the MCP server from
+    # the host. A Caddy container on this network can reach mcp:8000 directly.
     ports:
       # MCP endpoint at http://localhost:8000/mcp
       - '8000:8000'
