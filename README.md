@@ -34,12 +34,12 @@ never exposed publicly on its own.
 
 ## Connecting a client
 
-The ETAPI token you create in Trilium (Options → ETAPI) is the credential — pass it as
-a bearer header:
+The ETAPI token you create in Trilium (Options → ETAPI) is the credential — pass it in
+the `Authorization` header:
 
 ```bash
 claude mcp add trilium --transport http \
-  --header "Authorization: Bearer YOUR_TRILIUM_ETAPI_TOKEN" \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
   https://your-host/mcp
 ```
 
@@ -47,9 +47,12 @@ Register multiple instances by repeating with a different URL + token:
 
 ```bash
 claude mcp add trilium-work --transport http \
-  --header "Authorization: Bearer WORK_TOKEN" \
+  --header "Authorization: WORK_TOKEN" \
   https://work-host/mcp
 ```
+
+The raw token is what Trilium's ETAPI expects. A `Bearer ` prefix is also accepted (it is
+stripped before the request is forwarded), so `Authorization: Bearer YOUR_TOKEN` works too.
 
 All of them use the same trilium-mcp image; each deployment is bound to one Trilium via
 `TRILIUM_SERVER_URL`.

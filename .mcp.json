@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://your-host/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_TRILIUM_ETAPI_TOKEN"
+        "Authorization": "YOUR_TRILIUM_ETAPI_TOKEN"
       }
     }
   }
