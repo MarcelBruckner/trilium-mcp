@@ -17,13 +17,11 @@ DEFAULT_SPEC = Path(__file__).parent / "trillium-etapi.openapi"
 
 # All configuration comes from the environment so the server runs cleanly as a
 # container sidecar with no command-line arguments.
-TOKEN_ENV = "TRILIUM_ETAPI_TOKEN"          # Trilium ETAPI token (required)
 SERVER_ENV = "TRILIUM_SERVER_URL"          # Base URL of the Trilium instance
 SPEC_ENV = "TRILIUM_ETAPI_SPEC"            # Override path to the OpenAPI spec
 MCP_HOST_ENV = "MCP_HOST"                  # Interface the MCP server binds to
 MCP_PORT_ENV = "MCP_PORT"                  # Port the MCP server listens on
 MCP_PATH_ENV = "MCP_PATH"                  # HTTP path the MCP endpoint is served at
-MCP_AUTH_ENV = "MCP_AUTH_TOKEN"            # Optional bearer token protecting the endpoint
 
 DEFAULT_SERVER_URL = "http://trilium:8080"
 DEFAULT_HOST = "0.0.0.0"
@@ -34,16 +32,6 @@ HEALTH_PATH = "/health"
 # Per-request holder for the incoming client Authorization header. Populated by
 # TokenCaptureMiddleware and read by EtapiTokenAuth when calling Trilium.
 _incoming_auth: ContextVar[str | None] = ContextVar("incoming_auth", default=None)
-
-
-def token_missing_message() -> str:
-    """Recovery instructions shown when the ETAPI token is not set."""
-    return (
-        f"The Trilium ETAPI token is not set. Create a token in Trilium under "
-        f"Options -> ETAPI, then provide it to this container via the "
-        f"{TOKEN_ENV} environment variable (e.g. in your .env / compose file) "
-        f"and restart it."
-    )
 
 
 class EtapiTokenAuth(httpx.Auth):
@@ -138,57 +126,52 @@ def register_health(mcp: FastMCP) -> None:
         return PlainTextResponse("ok")
 
 
-def build_server() -> FastMCP:
+def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
     """Load the local OpenAPI spec and turn every documented ETAPI endpoint
-    into a FastMCP tool, calling the instance with the ETAPI token."""
-    server_url = os.environ.get(SERVER_ENV, DEFAULT_SERVER_URL)
-    base_url = server_url.rstrip("/")
-    # ETAPI endpoints live under /etapi (see the spec's `servers` list); the
-    # paths in the spec are relative to that.
-    if not base_url.endswith("/etapi"):
-        base_url = f"{base_url}/etapi"
+    into a FastMCP tool. The ETAPI token is supplied per request by the client
+    (see TokenCaptureMiddleware / EtapiTokenAuth), so no token is read here.
 
-    token = os.environ.get(TOKEN_ENV)
-    if not token:
-        raise RuntimeError(token_missing_message())
+    `client` is injectable for testing; in production the default client targets
+    TRILIUM_SERVER_URL and authenticates from the per-request contextvar.
+    """
+    if client is None:
+        server_url = os.environ.get(SERVER_ENV, DEFAULT_SERVER_URL).rstrip("/")
+        # ETAPI endpoints live under /etapi (see the spec's `servers` list).
+        if not server_url.endswith("/etapi"):
+            server_url = f"{server_url}/etapi"
+        client = httpx.AsyncClient(
+            base_url=server_url, auth=EtapiTokenAuth(), timeout=60
+        )
 
     spec_path = Path(os.environ.get(SPEC_ENV, str(DEFAULT_SPEC)))
     spec = load_spec(spec_path)
 
-    client = httpx.AsyncClient(
-        base_url=base_url, auth=EtapiTokenAuth(token), timeout=60
-    )
     mcp = FastMCP.from_openapi(
         openapi_spec=spec,
         client=client,
         name="Trilium ETAPI MCP",
+        # The live ETAPI returns null for fields the spec types as plain
+        # strings (e.g. branch.prefix), so response validation would reject
+        # otherwise-successful calls. Return the real response instead.
+        validate_output=False,
     )
     register_health(mcp)
     return mcp
 
 
 def build_error_server(error: BaseException) -> FastMCP:
-    """Build a minimal stand-in MCP server that reports a startup failure.
-
-    If the real server cannot be built (e.g. the ETAPI token is missing or the
-    spec is unreadable), exiting would leave clients with an opaque connection
-    error. Instead we start a server that completes the MCP handshake and stays
-    alive, announces the reason in its instructions, and returns the full error
-    (with recovery steps) via the `startup_error` tool.
+    """Stand-in MCP server that reports a startup failure over a live
+    connection instead of dying with an opaque error. Only reachable now if the
+    bundled OpenAPI spec is missing or unparseable.
     """
-    server_url = os.environ.get(SERVER_ENV, DEFAULT_SERVER_URL)
     summary = str(error).strip() or error.__class__.__name__
     detail = "".join(
         traceback.format_exception(type(error), error, error.__traceback__)
     ).strip()
-    fix_hint = (
-        "Most likely cause: the ETAPI token is not set. " + token_missing_message()
-    )
-
     instructions = (
-        f"This Trilium ETAPI MCP server ({server_url}) FAILED TO START and "
-        f"exposes no Trilium tools.\n\nReason: {summary}\n\n{fix_hint}\n\n"
-        "Call the `startup_error` tool for the full error and recovery steps."
+        f"This Trilium ETAPI MCP server FAILED TO START and exposes no Trilium "
+        f"tools.\n\nReason: {summary}\n\nThe bundled OpenAPI spec could not be "
+        f"loaded. Call the `startup_error` tool for the full error."
     )
     mcp = FastMCP(
         name="Trilium ETAPI MCP (startup failed)",
@@ -198,36 +181,26 @@ def build_error_server(error: BaseException) -> FastMCP:
 
     @mcp.tool
     def startup_error() -> str:
-        """Explain why this Trilium ETAPI MCP server failed to start, with the
-        full error, the affected server URL, and how to recover."""
+        """Explain why this Trilium ETAPI MCP server failed to start."""
         return (
-            f"The Trilium ETAPI MCP server for {server_url} failed to start, "
-            f"so no Trilium tools are available.\n\n"
-            f"{fix_hint}\n\n--- Full error ---\n{detail}"
+            "The Trilium ETAPI MCP server failed to start, so no Trilium tools "
+            f"are available.\n\n--- Full error ---\n{detail}"
         )
 
     return mcp
 
 
 def serve(mcp: FastMCP) -> None:
-    """Serve an MCP server over streamable HTTP, optionally behind a bearer
-    token, using the MCP_* environment configuration."""
+    """Serve an MCP server over streamable HTTP behind the token-capture
+    middleware, using the MCP_* environment configuration."""
     host = os.environ.get(MCP_HOST_ENV, DEFAULT_HOST)
     port = int(os.environ.get(MCP_PORT_ENV, DEFAULT_PORT))
     path = os.environ.get(MCP_PATH_ENV, DEFAULT_PATH)
 
-    app = mcp.http_app(path=path)
+    app = TokenCaptureMiddleware(mcp.http_app(path=path))
 
-    auth_token = os.environ.get(MCP_AUTH_ENV)
-    if auth_token:
-        app = BearerAuthMiddleware(app, auth_token)
-        print(f"MCP endpoint protected by bearer token ({MCP_AUTH_ENV}).",
-              file=sys.stderr)
-    else:
-        print(f"MCP endpoint is UNAUTHENTICATED -- set {MCP_AUTH_ENV} to "
-              f"protect it when reachable beyond localhost.", file=sys.stderr)
-
-    print(f"Serving Trilium ETAPI MCP on http://{host}:{port}{path}",
+    print(f"Serving Trilium ETAPI MCP on http://{host}:{port}{path} "
+          f"(client supplies the ETAPI token via Authorization: Bearer <token>)",
           file=sys.stderr)
     uvicorn.run(app, host=host, port=port)
 
@@ -236,9 +209,7 @@ def main():
     try:
         mcp = build_server()
     except Exception as e:
-        # Don't die: surface the failure over a live connection instead of an
-        # opaque error, so clients can call `startup_error` to learn the fix.
-        print(f"Error: failed to start Trilium ETAPI MCP server: {e}",
+        print(f"Error: failed to build Trilium ETAPI MCP server: {e}",
               file=sys.stderr)
         mcp = build_error_server(e)
     serve(mcp)
