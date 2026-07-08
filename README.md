@@ -79,8 +79,8 @@ The MCP endpoint is then available at `http://localhost:8081/mcp`.
 
 ```bash
 claude mcp add trilium --transport http \
-  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
-  http://localhost:8081/mcp
+  http://localhost:8081/mcp \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN"
 ```
 
 Your client now has the Trilium tools. See [Connecting a client](#connecting-a-client) for
@@ -94,13 +94,13 @@ wherever trilium-mcp is reachable (a TLS reverse proxy, or the container directl
 ```bash
 # Behind a reverse proxy (TLS)
 claude mcp add trilium --transport http \
-  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
-  https://your-host/mcp
+  https://your-host/mcp \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN"
 
 # Directly over a trusted LAN (plain HTTP), by IP or hostname
 claude mcp add trilium --transport http \
-  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
-  http://192.168.1.50:8081/mcp
+  http://192.168.1.50:8081/mcp \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN"
 ```
 
 Register **multiple instances** by repeating with a different URL + token; each deployment uses
@@ -108,8 +108,8 @@ the same image and is bound to one Trilium via `TRILIUM_SERVER_URL`:
 
 ```bash
 claude mcp add trilium-work --transport http \
-  --header "Authorization: WORK_TOKEN" \
-  https://work-host/mcp
+  https://work-host/mcp \
+  --header "Authorization: WORK_TOKEN"
 ```
 
 The raw token is what Trilium's ETAPI expects. A `Bearer ` prefix is also accepted (it is
