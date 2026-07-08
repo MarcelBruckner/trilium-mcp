@@ -14,6 +14,8 @@ from tests.live._client import (
 def test_create_and_get_note():
     async def run():
         async with client() as c:
+            # Direct createNote call (not via make_note) so the coverage guard,
+            # which scans test_*.py, sees it.
             created = await c.call_tool(
                 "createNote",
                 {

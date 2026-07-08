@@ -5,9 +5,9 @@ from pathlib import Path
 
 import yaml
 
-_HERE = Path(__file__).resolve()
-_LIVE_DIR = _HERE.parent
-_SPEC = _LIVE_DIR.parents[1] / "trilium-etapi.openapi"  # app/trilium-etapi.openapi
+_HERE = Path(__file__).resolve()  # app/tests/test_coverage.py
+_LIVE_DIR = _HERE.parent / "live"  # app/tests/live -- where the live test_*.py files are
+_SPEC = _HERE.parents[1] / "trilium-etapi.openapi"  # app/trilium-etapi.openapi
 
 
 # Endpoints intentionally NOT exposed as MCP tools, so they are not tested.

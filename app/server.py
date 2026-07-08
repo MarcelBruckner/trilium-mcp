@@ -237,7 +237,7 @@ def register_content_put_tools(mcp: FastMCP, client: httpx.AsyncClient) -> None:
         response = await client.put(
             f"/notes/{noteId}/content",
             content=content.encode("utf-8"),
-            headers={"Content-Type": "text/plain"},
+            headers={"Content-Type": "text/plain; charset=utf-8"},
         )
         response.raise_for_status()
         return f"Updated content of note {noteId!r}."
@@ -248,7 +248,7 @@ def register_content_put_tools(mcp: FastMCP, client: httpx.AsyncClient) -> None:
         response = await client.put(
             f"/attachments/{attachmentId}/content",
             content=content.encode("utf-8"),
-            headers={"Content-Type": "text/plain"},
+            headers={"Content-Type": "text/plain; charset=utf-8"},
         )
         response.raise_for_status()
         return f"Updated content of attachment {attachmentId!r}."
