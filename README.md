@@ -61,6 +61,27 @@ ETAPI call:
    ```
    The MCP endpoint is then available at `http://localhost:8081/mcp`.
 
+## Adding to an existing Trilium
+
+Already running Trilium with Docker Compose? Add this one service to that
+`docker-compose.yaml` — it builds straight from the repo, so there's nothing to clone:
+
+```yaml
+  trilium-mcp:
+    build: https://github.com/MarcelBruckner/trilium-mcp.git
+    restart: unless-stopped
+    environment:
+      # Service name of your existing Trilium on the same compose network.
+      TRILIUM_SERVER_URL: http://trilium:8080
+    ports:
+      - "8081:8081"
+```
+
+Then `docker compose up -d trilium-mcp`. Because both services share the compose network,
+`trilium` resolves to your existing container. If your Trilium runs elsewhere (a separate
+compose project or host), point `TRILIUM_SERVER_URL` at a URL this container can reach and
+attach it to the right network — see [Configuration](#configuration).
+
 ## Connecting a client
 
 The ETAPI token you create in Trilium (Options → ETAPI) is the credential — pass it in
