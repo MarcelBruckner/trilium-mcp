@@ -33,6 +33,24 @@ def _export_client(zip_payload: bytes) -> httpx.AsyncClient:
     )
 
 
+def _capture_put_content_client(captured: dict) -> httpx.AsyncClient:
+    """Client whose transport records the PUT /content request so we can assert
+    the raw body and Content-Type header reach Trilium (they didn't before the
+    fix: FastMCP sent a scalar text/plain body with no Content-Type)."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/content") and request.method == "PUT":
+            captured["content_type"] = request.headers.get("content-type")
+            captured["body"] = request.content
+            return httpx.Response(204)
+        return httpx.Response(404, json={"status": 404})
+
+    return httpx.AsyncClient(
+        base_url="http://trilium:8080/etapi",
+        auth=server.EtapiTokenAuth(),
+        transport=httpx.MockTransport(handler),
+    )
+
+
 def _mock_client():
     """An httpx client whose transport fakes Trilium's create-note response,
     including branch.prefix == null (the field the spec types as string)."""
@@ -162,3 +180,27 @@ def test_get_note_content_html_passes_through():
     # returned" because the text/html response carried no structured content.
     result = asyncio.run(run())
     assert result.content[0].text == "<p>hello</p>"
+
+
+def test_put_note_content_sends_text_plain_body():
+    from fastmcp import Client
+
+    captured: dict = {}
+
+    async def run():
+        reset = server._incoming_auth.set("Bearer test-token")
+        try:
+            mcp = server.build_server(client=_capture_put_content_client(captured))
+            async with Client(mcp) as c:
+                return await c.call_tool(
+                    "putNoteContentById", {"noteId": "abc123", "content": "hello body"}
+                )
+        finally:
+            server._incoming_auth.reset(reset)
+
+    # Before the fix Trilium got no parsable body (no Content-Type). Now the raw
+    # text is forwarded with an explicit text/plain Content-Type.
+    result = asyncio.run(run())
+    assert result.is_error is False
+    assert captured["body"] == b"hello body"
+    assert captured["content_type"].startswith("text/plain")

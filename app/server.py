@@ -219,6 +219,41 @@ def register_export_tool(mcp: FastMCP, client: httpx.AsyncClient) -> None:
         return out
 
 
+def register_content_put_tools(mcp: FastMCP, client: httpx.AsyncClient) -> None:
+    """Register working replacements for the two text/plain PUT-content tools.
+
+    The `/notes/{id}/content` and `/attachments/{id}/content` PUT endpoints take
+    a raw text/plain body. FastMCP's request director sets a scalar body as httpx
+    `content` but never adds a Content-Type header (see the final `else: content =
+    body` branch in fastmcp/utilities/openapi/director.py), so Trilium receives no
+    parsable body and rejects the update with 500 "Cannot set null content". We
+    send the raw body with an explicit text/plain Content-Type instead. The
+    `client` carries the same per-request ETAPI auth as the generated tools.
+    """
+
+    @mcp.tool(name="putNoteContentById")
+    async def put_note_content(noteId: str, content: str) -> str:
+        """Update the content of a note (raw text/plain body)."""
+        response = await client.put(
+            f"/notes/{noteId}/content",
+            content=content.encode("utf-8"),
+            headers={"Content-Type": "text/plain"},
+        )
+        response.raise_for_status()
+        return f"Updated content of note {noteId!r}."
+
+    @mcp.tool(name="putAttachmentContentById")
+    async def put_attachment_content(attachmentId: str, content: str) -> str:
+        """Update the content of an attachment (raw text/plain body)."""
+        response = await client.put(
+            f"/attachments/{attachmentId}/content",
+            content=content.encode("utf-8"),
+            headers={"Content-Type": "text/plain"},
+        )
+        response.raise_for_status()
+        return f"Updated content of attachment {attachmentId!r}."
+
+
 def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
     """Load the local OpenAPI spec and turn every documented ETAPI endpoint
     into a FastMCP tool. The ETAPI token is supplied per request by the client
@@ -239,22 +274,27 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
     spec_path = Path(os.environ.get(SPEC_ENV, str(DEFAULT_SPEC)))
     spec = load_spec(spec_path)
 
-    # Two ETAPI endpoints don't fit FastMCP's JSON-in/JSON-out assumption, and
-    # they need different fixes because they fail at different layers:
+    # Several ETAPI endpoints don't fit FastMCP's JSON-in/JSON-out assumption,
+    # and they need different fixes because they fail at different layers:
     #
-    #   * text/html (getNoteContent, ...) -- a *metadata* problem. FastMCP's tool
-    #     already returns the right thing (response.json() raises the *caught*
-    #     JSONDecodeError, so it falls back to returning the text body); it just
-    #     leaves an output schema attached that the MCP layer then rejects.
-    #     Fixable by clearing the schema -> mcp_component_fn (build-time tweak).
-    #   * application/zip (exportNoteSubtree) -- a *behavior* problem. The ZIP
-    #     bytes make response.json() raise an *uncaught* UnicodeDecodeError, so
-    #     the tool crashes before any schema is consulted; and raw bytes are
-    #     useless to a client anyway. This needs real logic (fetch + unzip), so
-    #     we exclude the generated tool and replace it -> register_export_tool.
+    #   * text/html RESPONSES (getNoteContent, ...) -- a *metadata* problem.
+    #     FastMCP's tool already returns the right thing (response.json() raises
+    #     the *caught* JSONDecodeError, so it falls back to returning the text
+    #     body); it just leaves an output schema attached that the MCP layer then
+    #     rejects. Fixable by clearing the schema -> mcp_component_fn.
+    #   * application/zip RESPONSE (exportNoteSubtree) -- a *behavior* problem.
+    #     The ZIP bytes make response.json() raise an *uncaught* UnicodeDecodeError,
+    #     so the tool crashes before any schema is consulted; and raw bytes are
+    #     useless to a client anyway. Needs real logic (fetch + unzip), so we
+    #     exclude the generated tool and replace it -> register_export_tool.
+    #   * text/plain REQUEST bodies (putNoteContentById, putAttachmentContentById)
+    #     -- a *behavior* problem on the request side. FastMCP's director sends a
+    #     scalar text/plain body with no Content-Type header, so Trilium receives
+    #     no parsable body and 500s. Needs a real request, so we exclude the
+    #     generated tools and replace them -> register_content_put_tools.
     #
     # mcp_component_fn can only adjust component metadata, so it can't fix the
-    # ZIP case; that's why the two are handled separately.
+    # behavior cases; that's why they are handled by exclusion + replacement.
     mcp = FastMCP.from_openapi(
         openapi_spec=spec,
         client=client,
@@ -263,15 +303,17 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
         # strings (e.g. branch.prefix), so response validation would reject
         # otherwise-successful calls. Return the real response instead.
         validate_output=False,
-        # Behavior fix: drop the generated exportNoteSubtree tool (see above);
-        # register_export_tool replaces it below.
+        # Behavior fixes: drop the generated tools whose bodies/responses FastMCP
+        # mishandles (see above); the register_* calls below replace them.
         route_maps=[
             RouteMap(methods=["GET"], pattern=r"/export$", mcp_type=MCPType.EXCLUDE),
+            RouteMap(methods=["PUT"], pattern=r"/content$", mcp_type=MCPType.EXCLUDE),
         ],
         # Metadata fix: clear the output schema on non-JSON tools (see above).
         mcp_component_fn=drop_non_json_output_schema,
     )
     register_export_tool(mcp, client)
+    register_content_put_tools(mcp, client)
     register_health(mcp)
     return mcp
 
