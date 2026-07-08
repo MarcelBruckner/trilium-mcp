@@ -14,7 +14,16 @@ from tests.live._client import (
 def test_create_and_get_note():
     async def run():
         async with client() as c:
-            note_id = await make_note(c, title="itest-create")
+            created = await c.call_tool(
+                "createNote",
+                {
+                    "parentNoteId": "root",
+                    "title": "itest-create",
+                    "type": "text",
+                    "content": "body",
+                },
+            )
+            note_id = created.data["note"]["noteId"]
             got = await c.call_tool("getNoteById", {"noteId": note_id})
             return note_id, got.data
     note_id, note = run_async(run())
