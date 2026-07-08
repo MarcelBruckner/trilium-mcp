@@ -1,4 +1,8 @@
-# Trilium ETAPI MCP server
+<p align="center">
+  <img src="docs/trilium.svg" alt="Trilium logo" width="96">
+</p>
+
+<h1 align="center">Trilium ETAPI MCP server</h1>
 
 A standalone [MCP](https://modelcontextprotocol.io) server that exposes the
 [Trilium](https://triliumnotes.org) [ETAPI](https://github.com/TriliumNext/Trilium)
