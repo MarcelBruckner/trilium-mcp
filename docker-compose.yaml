@@ -33,6 +33,9 @@ services:
       # Fixed target Trilium (reached over the internal compose network).
       # The ETAPI token is supplied per request by the MCP client, not here.
       TRILIUM_SERVER_URL: http://trilium:8080
+      # Optional: restrict accepted Host headers (DNS-rebinding protection).
+      # Unset = accept any Host (LAN IP / reverse-proxy domain). Example:
+      # MCP_ALLOWED_HOSTS: "192.168.1.50:8081,trilium.example.com"
     # Optional: only needed if clients/reverse-proxy reach the MCP server from
     # the host. A Caddy container on this network can reach mcp:8081 directly.
     ports:

@@ -22,6 +22,7 @@ SPEC_ENV = "TRILIUM_ETAPI_SPEC"            # Override path to the OpenAPI spec
 MCP_HOST_ENV = "MCP_HOST"                  # Interface the MCP server binds to
 MCP_PORT_ENV = "MCP_PORT"                  # Port the MCP server listens on
 MCP_PATH_ENV = "MCP_PATH"                  # HTTP path the MCP endpoint is served at
+MCP_ALLOWED_HOSTS_ENV = "MCP_ALLOWED_HOSTS"  # comma-separated Host allowlist (see serve)
 
 DEFAULT_SERVER_URL = "http://trilium:8080"
 DEFAULT_HOST = "0.0.0.0"
@@ -197,10 +198,25 @@ def serve(mcp: FastMCP) -> None:
     port = int(os.environ.get(MCP_PORT_ENV, DEFAULT_PORT))
     path = os.environ.get(MCP_PATH_ENV, DEFAULT_PATH)
 
-    app = TokenCaptureMiddleware(mcp.http_app(path=path))
+    # FastMCP's streamable-HTTP transport does DNS-rebinding protection: by
+    # default it 421s any Host header that isn't localhost. This server is meant
+    # to be reached by LAN IP or (behind a reverse proxy) a public domain, and
+    # the ETAPI token is the real gate -- so leave the Host allowlist open by
+    # default and only restrict when MCP_ALLOWED_HOSTS is set.
+    allowed = os.environ.get(MCP_ALLOWED_HOSTS_ENV, "").strip()
+    if allowed:
+        hosts = [h.strip() for h in allowed.split(",") if h.strip()]
+        inner = mcp.http_app(path=path, allowed_hosts=hosts)
+        print(f"Host protection ON; allowed hosts (plus localhost): {hosts}",
+              file=sys.stderr)
+    else:
+        inner = mcp.http_app(path=path, host_origin_protection=False)
+        print(f"Host protection OFF (any Host accepted) -- set "
+              f"{MCP_ALLOWED_HOSTS_ENV} to restrict.", file=sys.stderr)
+    app = TokenCaptureMiddleware(inner)
 
     print(f"Serving Trilium ETAPI MCP on http://{host}:{port}{path} "
-          f"(client supplies the ETAPI token via Authorization: Bearer <token>)",
+          f"(client supplies the ETAPI token via the Authorization header)",
           file=sys.stderr)
     uvicorn.run(app, host=host, port=port)
 

@@ -57,6 +57,15 @@ stripped before the request is forwarded), so `Authorization: Bearer YOUR_TOKEN`
 All of them use the same trilium-mcp image; each deployment is bound to one Trilium via
 `TRILIUM_SERVER_URL`.
 
+On a trusted LAN you can also connect straight to the container over plain HTTP (no reverse
+proxy), by IP or hostname:
+
+```bash
+claude mcp add trilium --transport http \
+  --header "Authorization: YOUR_TRILIUM_ETAPI_TOKEN" \
+  http://192.168.1.50:8081/mcp
+```
+
 Alternatively, use the provided [`.mcp.json`](.mcp.json), filling in your host and token.
 
 ## TLS / reverse proxy
@@ -81,6 +90,7 @@ All configuration is via environment variables:
 | `MCP_PORT`           | `8081`                | Port the MCP server listens on.                                        |
 | `MCP_PATH`           | `/mcp`                | HTTP path the MCP endpoint is served at.                               |
 | `TRILIUM_ETAPI_SPEC` | bundled spec          | Override the OpenAPI spec path.                                        |
+| `MCP_ALLOWED_HOSTS`  | *(unset = any)*       | Comma-separated `Host` allowlist (DNS-rebinding protection). Unset accepts any Host; set it to restrict. |
 
 ## Security
 
@@ -92,9 +102,17 @@ forwarded request reaches the actual ETAPI call, and the server holds no secret 
 own. The `/health` endpoint is always unauthenticated (used by the container
 healthcheck).
 
-Because the token is forwarded as-is on every call, only run this behind TLS: put the
-Caddy (or other) reverse proxy in front and let it terminate TLS, so the token never
-travels over plain HTTP outside the trusted Docker network.
+The token is sent in the `Authorization` header on every call. Over plain HTTP it travels
+in cleartext, so either keep traffic on a **trusted network** (e.g. a LAN or the Docker
+network) or put TLS in front — the Caddy reverse proxy above terminates TLS so the token
+never crosses an untrusted hop. Direct `http://<lan-ip>:8081` access is fine on a network
+you trust.
+
+By default the server accepts requests for **any** `Host` (FastMCP's DNS-rebinding
+protection is disabled), so it can be reached by LAN IP or by the domain your reverse proxy
+forwards. To lock this down, set `MCP_ALLOWED_HOSTS` to a comma-separated list of the
+host[:port] values you actually use (e.g. `192.168.1.50:8081,trilium.example.com`);
+`localhost` is always allowed, and anything else gets a `421`.
 
 If the OpenAPI spec cannot be loaded at startup, the server still starts and completes
 the MCP handshake, but exposes only a single `startup_error` tool describing how to fix
