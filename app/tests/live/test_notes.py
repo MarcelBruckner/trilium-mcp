@@ -1,9 +1,14 @@
-import json
-
 import pytest
 from fastmcp.exceptions import ToolError
 
-from tests.live._client import body_arg_name, client, make_note, path_arg_name, run_async
+from tests.live._client import (
+    body_arg_name,
+    client,
+    make_note,
+    path_arg_name,
+    result_list,
+    run_async,
+)
 
 
 def test_create_and_get_note():
@@ -64,37 +69,12 @@ def test_put_then_get_note_content():
     assert "updated body" in text
 
 
-def _as_list(data):
-    """FastMCP may wrap a top-level array as {"result": [...]} under
-    validate_output=False; accept either shape."""
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict) and isinstance(data.get("result"), list):
-        return data["result"]
-    return None
-
-
-def _result_list(r):
-    """`.data` on these three tools is unreliable: their generated output
-    schema is `{"type": "object", "additionalProperties": True,
-    "x-fastmcp-wrap-result": True}` with no `properties.result`, so the
-    fastmcp client's `x-fastmcp-wrap-result` unwrap step hands a bare list to
-    a `dict[str, Any]` type-adapter, the validation raises, and `.data` is
-    silently left `None` even though the call succeeded. The raw `content`
-    text is populated correctly regardless, so fall back to parsing that.
-    """
-    as_list = _as_list(r.data)
-    if as_list is not None:
-        return as_list
-    return _as_list(json.loads(r.content[0].text))
-
-
 def test_get_note_revisions_returns_list():
     async def run():
         async with client() as c:
             note_id = await make_note(c, title="itest-revs")
             return await c.call_tool("getNoteRevisions", {"noteId": note_id})
-    assert _result_list(run_async(run())) is not None
+    assert isinstance(result_list(run_async(run())), list)
 
 
 def test_get_note_attachments_returns_list():
@@ -102,12 +82,12 @@ def test_get_note_attachments_returns_list():
         async with client() as c:
             note_id = await make_note(c, title="itest-atts")
             return await c.call_tool("getNoteAttachments", {"noteId": note_id})
-    assert _result_list(run_async(run())) is not None
+    assert isinstance(result_list(run_async(run())), list)
 
 
 def test_get_note_history_returns_list():
     r = run_async(_history())
-    assert _result_list(r) is not None
+    assert isinstance(result_list(r), list)
 
 
 async def _history():

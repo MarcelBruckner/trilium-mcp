@@ -1,15 +1,8 @@
-import json
-
-from tests.live._client import client, make_note, run_async
+from tests.live._client import client, make_note, result_list, run_async
 
 
 async def _first_revision_id(c, note_id) -> str:
-    revs = await c.call_tool("getNoteRevisions", {"noteId": note_id})
-    # The tool's .data/.structured_content wrap the JSON array under a
-    # "result" key (FastMCP requires a top-level object for structured
-    # content); the raw text content is `{"result": [...]}`.
-    parsed = json.loads(revs.content[0].text)
-    items = parsed["result"] if isinstance(parsed, dict) else parsed
+    items = result_list(await c.call_tool("getNoteRevisions", {"noteId": note_id}))
     assert items, "expected at least one revision after createRevision"
     return items[0]["revisionId"]
 

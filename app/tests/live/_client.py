@@ -1,6 +1,7 @@
 """Shared helpers for the live integration tests (see conftest.py for the skip)."""
 
 import asyncio
+import json
 import os
 from pathlib import Path
 
@@ -81,3 +82,24 @@ async def body_arg_name(c, tool: str, path_key: str) -> str:
     tools = {t.name: t for t in await c.list_tools()}
     props = (tools[tool].inputSchema or {}).get("properties", {})
     return next(k for k in props if k != path_key)
+
+
+def result_list(result) -> list:
+    """Extract a top-level JSON array from a tool result.
+
+    Endpoints like getNoteRevisions/getNoteAttachments/getNoteHistory return a
+    top-level array. FastMCP's output-schema unwrap leaves `.data` as None for
+    that shape, so fall back to the result content text, which may be a bare
+    array or a {"result": [...]} wrapper.
+    """
+    data = result.data
+    if data is None and result.content:
+        try:
+            data = json.loads(result.content[0].text)
+        except (json.JSONDecodeError, AttributeError, IndexError):
+            data = None
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and isinstance(data.get("result"), list):
+        return data["result"]
+    return []
