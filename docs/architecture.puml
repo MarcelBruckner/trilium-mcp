@@ -1,39 +1,40 @@
 @startuml architecture
 title Trilium ETAPI MCP — deployment
 
+left to right direction
+skinparam linetype ortho
 skinparam shadowing false
+skinparam nodesep 40
+skinparam ranksep 55
 skinparam defaultTextAlignment center
 skinparam rectangle {
     BackgroundColor #F5F7FA
     BorderColor #8A94A6
     roundCorner 12
 }
-skinparam node {
-    BackgroundColor #EEF2F7
+skinparam database {
+    BackgroundColor #F5F7FA
     BorderColor #8A94A6
 }
 skinparam ArrowColor #4A5568
 
-actor "MCP client\n(Claude Code, …)" as C1
-actor "MCP client\n(other host / token)" as C2
+together {
+    actor "MCP client\n(via reverse proxy)" as C1
+    actor "MCP client\n(direct, trusted LAN)" as C2
+}
 
-node "Docker host / compose network" as Host {
-    rectangle "reverse proxy\n(optional — TLS)" as Proxy #FFF6E5
+rectangle "reverse proxy\n(optional — TLS)" as Proxy #FFF6E5
+
+rectangle "Docker host / compose network" as Host #EEF2F7 {
     rectangle "mcp sidecar\n(this repo)\n:8081 /mcp" as MCP
     rectangle "trilium\n:8080 /etapi" as Trilium
     database "trilium-data\n(volume)" as Data
 }
 
-C1 --> Proxy : HTTPS /mcp\nAuthorization: <ETAPI token>
-C2 --> MCP : HTTP /mcp (trusted LAN)\nAuthorization: <ETAPI token>
+C1 --> Proxy : HTTPS
+C2 --> MCP : HTTP (LAN)
 Proxy --> MCP : /mcp
-MCP --> Trilium : ETAPI\n(token forwarded)
-Trilium --> Data : reads / writes notes
-
-note bottom of MCP
-  Turns every ETAPI endpoint into an MCP tool
-  (~40) at startup. Holds no secret — the client's
-  token is the only credential.
-end note
+MCP --> Trilium : ETAPI
+Trilium --> Data : notes
 
 @enduml
