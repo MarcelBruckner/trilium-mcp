@@ -28,12 +28,22 @@ def _spec_operation_ids() -> set[str]:
 
 
 def _exercised_tool_names() -> set[str]:
+    # Scans for tool-name string literals ANYWHERE in the test files (not just
+    # at call_tool(...)/call(...) sites), because the calendar tests invoke
+    # tools via a parametrized variable and the names appear only as string
+    # literals in a _CASES list, e.g. ("getInboxNote", {...}).
+    #
+    # Residual limitation: a string literal inside a docstring could still
+    # theoretically match and count as coverage, but a string-literal in code
+    # (vs. a free-text comment) is a reasonable proxy for real intent.
     names = set()
     for py in _LIVE_DIR.glob("test_*.py"):
         if py.name == "test_coverage.py":
             continue  # don't count names mentioned in this guard itself
-        source = py.read_text()
-        names.update(re.findall(r'["\']([a-zA-Z]+)["\']', source))
+        for line in py.read_text().splitlines():
+            code = line.split("#", 1)[0]  # drop line comments so a commented-out
+            # or TODO mention of a tool can't count as real coverage
+            names.update(re.findall(r'["\']([a-zA-Z]+)["\']', code))
     return names
 
 
@@ -61,7 +71,7 @@ def test_no_unknown_tool_names_referenced():
     operations = _spec_operation_ids()
     called = set(
         re.findall(
-            r'call_tool\(\s*["\']([a-zA-Z]+)["\']',
+            r'(?:call_tool|call)\(\s*["\']([a-zA-Z]+)["\']',
             "\n".join(
                 p.read_text() for p in _LIVE_DIR.glob("test_*.py")
                 if p.name != "test_coverage.py"
