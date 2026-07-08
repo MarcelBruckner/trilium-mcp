@@ -164,6 +164,16 @@ def test_export_subtree_replaces_generated_tool_exactly_once():
     assert names.count("exportNoteSubtree") == 1
 
 
+def test_auth_session_tools_are_excluded():
+    # login/logout manage ETAPI session tokens and must not be exposed as MCP
+    # tools: an LLM authenticates via the Authorization header, and logout would
+    # invalidate its own credential.
+    mcp = server.build_server()
+    names = {t.name for t in asyncio.run(mcp.list_tools())}
+    assert "login" not in names
+    assert "logout" not in names
+
+
 def test_get_note_content_html_passes_through():
     from fastmcp import Client
 

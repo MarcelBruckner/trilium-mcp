@@ -295,6 +295,12 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
     #
     # mcp_component_fn can only adjust component metadata, so it can't fix the
     # behavior cases; that's why they are handled by exclusion + replacement.
+    #
+    # Separately, the /auth/login and /auth/logout endpoints are excluded outright
+    # (not replaced): they manage ETAPI session tokens, but an MCP client already
+    # authenticates with the token in the Authorization header. An LLM has no
+    # reason to mint a token from a password (login) and calling logout would
+    # invalidate its own credential -- so neither belongs on the tool surface.
     mcp = FastMCP.from_openapi(
         openapi_spec=spec,
         client=client,
@@ -305,9 +311,16 @@ def build_server(client: httpx.AsyncClient | None = None) -> FastMCP:
         validate_output=False,
         # Behavior fixes: drop the generated tools whose bodies/responses FastMCP
         # mishandles (see above); the register_* calls below replace them.
+        # Plus: drop auth session-token endpoints outright (see above) -- not
+        # useful, and logout is a footgun for a token-authenticated client.
         route_maps=[
             RouteMap(methods=["GET"], pattern=r"/export$", mcp_type=MCPType.EXCLUDE),
             RouteMap(methods=["PUT"], pattern=r"/content$", mcp_type=MCPType.EXCLUDE),
+            RouteMap(
+                methods=["POST"],
+                pattern=r"/auth/(login|logout)$",
+                mcp_type=MCPType.EXCLUDE,
+            ),
         ],
         # Metadata fix: clear the output schema on non-JSON tools (see above).
         mcp_component_fn=drop_non_json_output_schema,
