@@ -29,7 +29,7 @@ served over streamable **HTTP** so any MCP client connects to it by URL.
 ## Architecture
 
 <p align="center">
-  <img src="docs/architecture.png" alt="Deployment: MCP clients → trilium-mcp → Trilium, on the Docker network" width="720">
+  <img src="docs/architecture.png" alt="Architecture: MCP clients → trilium-mcp → Trilium, on the Docker network" width="720">
 </p>
 
 **trilium-mcp** (this repo) runs as a container sidecar and talks to Trilium over the internal
