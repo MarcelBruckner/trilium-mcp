@@ -34,15 +34,15 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           # Each tag type fires only on its matching event, so one list serves both:
-          #   branch push -> :<branch> + :sha-…   (a testable image; latest is NOT moved)
-          #   v* tag push -> :1.2.3/:1.2/:1 + :latest (default latest=auto) + :sha-…
-          # TODO: sha- tags accumulate in GHCR; add a scheduled cleanup/retention job.
+          #   branch push -> :<branch>              (a testable image; latest is NOT moved)
+          #   v* tag push -> :1.2.3/:1.2/:1 + :latest (default latest=auto)
+          # No :sha tags: :<branch> covers testing, and GHCR keeps an immutable
+          # @sha256 digest per image for exact pinning/rollback when needed.
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3

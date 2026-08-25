@@ -38,9 +38,10 @@ docker compose down && git checkout -- trilium-data/ && docker compose up -d
 ```
 
 The image is built and pushed to GHCR by `.github/workflows/publish.yml`: every branch
-push produces a testable image (`:<branch>` + `:sha-…`), and a `v*` tag produces the
-versioned release (`:1.2.3`/`:1.2`/`:1`/`:latest`) plus a GitHub release. `latest` moves
-only on version tags.
+push produces a testable image tagged `:<branch>`, and a `v*` tag produces the versioned
+release (`:1.2.3`/`:1.2`/`:1`/`:latest`) plus a GitHub release. `latest` moves only on
+version tags. There are no `:sha` tags — pin an exact build by its immutable `@sha256`
+digest when needed. `cleanup-packages.yml` weekly prunes orphaned untagged manifests.
 
 ## Test layout
 
