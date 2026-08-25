@@ -5,7 +5,6 @@ name: Publish image
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -30,8 +29,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
+          # A semver tag push (v1.2.3) yields 1.2.3, 1.2, 1, and — via the default
+          # latest=auto flavor — latest.
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}

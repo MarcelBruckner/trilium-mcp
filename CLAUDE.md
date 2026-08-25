@@ -37,8 +37,8 @@ curl http://localhost:8081/health   # -> ok
 docker compose down && git checkout -- trilium-data/ && docker compose up -d
 ```
 
-The image is built and pushed to GHCR by `.github/workflows/publish.yml` on push to
-`main` and on `v*` tags.
+The image is built and pushed to GHCR by `.github/workflows/publish.yml` on `v*` tags
+(and manual `workflow_dispatch`).
 
 ## Test layout
 
