@@ -8,6 +8,9 @@
   <a href="https://github.com/MarcelBruckner/trilium-mcp/pkgs/container/trilium-mcp">
     <img alt="GHCR image" src="https://img.shields.io/github/v/release/MarcelBruckner/trilium-mcp?logo=docker&logoColor=white&label=ghcr.io%2Fmarcelbruckner%2Ftrilium-mcp&color=2496ED">
   </a>
+  <a href="LICENSE">
+    <img alt="License: AGPL v3" src="https://img.shields.io/badge/License-AGPL_v3-blue.svg">
+  </a>
 </p>
 
 A standalone [MCP](https://modelcontextprotocol.io) server that exposes the
