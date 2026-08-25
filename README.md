@@ -30,6 +30,7 @@ served over streamable **HTTP** so any MCP client connects to it by URL.
 - [How it works](#how-it-works)
 - [Alternatives](#alternatives)
 - [Contributing](#contributing)
+- [License](#license)
 
 ## Architecture
 
@@ -236,3 +237,13 @@ For local development there's a ready-to-run stack — a throwaway Trilium seede
 with the default demo notes plus the MCP server built from local source
 (`docker compose up -d --build`). See [CONTRIBUTING.md](CONTRIBUTING.md) for the
 dev setup, seed-instance credentials, and how to run the tests.
+
+## License
+
+Copyright © 2026 Marcel Bruckner.
+
+Licensed under the [GNU Affero General Public License v3.0 or later](LICENSE)
+(AGPL-3.0-or-later). You may use, modify, and redistribute it, but any modified
+version — **including one you run as a network service** — must be released under
+the same license with its source made available to its users, and the original
+copyright notice preserved. See [LICENSE](LICENSE) for the full terms.
