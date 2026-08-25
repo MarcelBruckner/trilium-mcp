@@ -37,8 +37,10 @@ curl http://localhost:8081/health   # -> ok
 docker compose down && git checkout -- trilium-data/ && docker compose up -d
 ```
 
-The image is built and pushed to GHCR by `.github/workflows/publish.yml` on `v*` tags
-(and manual `workflow_dispatch`).
+The image is built and pushed to GHCR by `.github/workflows/publish.yml`: every branch
+push produces a testable image (`:<branch>` + `:sha-…`), and a `v*` tag produces the
+versioned release (`:1.2.3`/`:1.2`/`:1`/`:latest`) plus a GitHub release. `latest` moves
+only on version tags.
 
 ## Test layout
 

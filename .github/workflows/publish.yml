@@ -4,7 +4,11 @@ name: Publish image
 # Auth uses the built-in GITHUB_TOKEN — no secrets to configure.
 
 on:
+  # Every branch push builds a testable image (:<branch> + :sha-…); every v* tag
+  # builds the versioned release (:1.2.3/:1.2/:1/:latest). Both filters are needed:
+  # listing only tags would stop branch pushes from triggering at all.
   push:
+    branches: ["**"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -29,9 +33,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
-          # A semver tag push (v1.2.3) yields 1.2.3, 1.2, 1, and — via the default
-          # latest=auto flavor — latest.
+          # Each tag type fires only on its matching event, so one list serves both:
+          #   branch push -> :<branch> + :sha-…   (a testable image; latest is NOT moved)
+          #   v* tag push -> :1.2.3/:1.2/:1 + :latest (default latest=auto) + :sha-…
+          # TODO: sha- tags accumulate in GHCR; add a scheduled cleanup/retention job.
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
