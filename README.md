@@ -4,6 +4,12 @@
 
 <h1 align="center"><a href="https://github.com/MarcelBruckner/trilium-mcp">Trilium ETAPI MCP server</a></h1>
 
+<p align="center">
+  <a href="https://github.com/MarcelBruckner/trilium-mcp/pkgs/container/trilium-mcp">
+    <img alt="GHCR image" src="https://img.shields.io/github/v/release/MarcelBruckner/trilium-mcp?logo=docker&logoColor=white&label=ghcr.io%2Fmarcelbruckner%2Ftrilium-mcp&color=2496ED">
+  </a>
+</p>
+
 A standalone [MCP](https://modelcontextprotocol.io) server that exposes the
 [Trilium](https://triliumnotes.org) [ETAPI](https://github.com/TriliumNext/Trilium)
 (External API) as MCP tools. It runs as a **container sidecar** next to your Trilium
